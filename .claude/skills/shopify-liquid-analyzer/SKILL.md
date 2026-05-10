@@ -97,7 +97,7 @@ Dans `layout/theme.liquid` et `templates/` :
 
 ### Step 6 : Rapport structuré
 
-Générer `workspace-shopify/theme-audit-report.md` :
+Générer `theme-audit-report.md` à la racine du repo :
 
 ```markdown
 # Audit Thème Liquid — {nom thème}

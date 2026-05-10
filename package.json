@@ -26,6 +26,15 @@
     "ecommerce"
   ],
   "license": "MIT",
+  "author": {
+    "name": "Rayan Djebar",
+    "email": "djebar.rayan75@gmail.com",
+    "url": "https://github.com/djebar-rayan"
+  },
+  "bugs": {
+    "url": "https://github.com/djebar-rayan/shopify-automation-toolkit/issues"
+  },
+  "homepage": "https://github.com/djebar-rayan/shopify-automation-toolkit#readme",
   "repository": {
     "type": "git",
     "url": "https://github.com/djebar-rayan/shopify-automation-toolkit.git"
