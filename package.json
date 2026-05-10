@@ -1,0 +1,33 @@
+{
+  "name": "shopify-automation-toolkit",
+  "version": "1.0.0",
+  "description": "Toolkit Node.js réutilisable pour automatiser l'audit, le SEO, le contenu et la gestion des images d'une boutique Shopify, piloté par fichiers de tâche et alimenté par Gemini.",
+  "main": "fetch-store-data.js",
+  "scripts": {
+    "fetch": "node fetch-store-data.js",
+    "audit": "node audit/audit.js",
+    "audit:full": "node audit/full-audit.js",
+    "image:audit": "node images/image-audit.js",
+    "image:visual-audit": "node images/visual-audit.js",
+    "klaviyo:export": "node integrations/klaviyo/klaviyo-export.js",
+    "klaviyo:adapt": "node integrations/shopify-email/adapt-templates.js",
+    "syntax-check": "node -e \"const{readdirSync,statSync}=require('fs');const{join}=require('path');const{execSync}=require('child_process');function walk(d){for(const f of readdirSync(d)){const p=join(d,f);if(statSync(p).isDirectory()&&!['node_modules','.git','.audit-tmp','store-data','generated-images'].includes(f))walk(p);else if(p.endsWith('.js'))execSync('node -c \\\"'+p+'\\\"',{stdio:'inherit'});}}walk('.');console.log('All JS files parse OK.');\""
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "shopify",
+    "automation",
+    "audit",
+    "seo",
+    "gemini",
+    "ai",
+    "ecommerce"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/djebar-rayan/shopify-automation-toolkit.git"
+  }
+}

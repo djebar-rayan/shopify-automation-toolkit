@@ -1,0 +1,2 @@
+# Ce dossier accueille les images générées par images/image-generate.js
+# Les images (*.jpg, *.png) sont gitignorées — validation visuelle locale avant upload.

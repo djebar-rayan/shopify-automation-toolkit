@@ -1,0 +1,47 @@
+# Secrets
+.env
+.env.local
+.env.*.local
+
+# Données extraites de la boutique (peuplent localement, ne pas versionner)
+store-data/*.md
+
+# Images générées localement (validation avant upload)
+generated-images/*.jpg
+generated-images/*.jpeg
+generated-images/*.png
+generated-images/*.webp
+
+# Rapports auto-générés (volatils, écrasés à chaque run)
+audit-report.md
+visual-audit-report.md
+*-report.md
+
+# Données utilisateur des intégrations (CSV, exports privés, fichiers personnels)
+integrations/klaviyo/templates/
+integrations/klaviyo/*.csv
+integrations/shopify-email/templates-adapted/
+integrations/klaviyo/flows.md
+integrations/klaviyo/lists.md
+integrations/klaviyo/segments.md
+integrations/klaviyo/metrics.md
+integrations/klaviyo/profiles-summary.md
+integrations/klaviyo/klaviyo-summary.md
+
+# Fichiers de tâche utilisateur (les exemples sont versionnés ; les vraies tâches non)
+tasks/task-*.md
+
+# Tampons GraphQL
+.audit-tmp/
+
+# Claude Code local
+.claude/settings.local.json
+.claude/scheduled_tasks.lock
+
+# Node / IDE
+node_modules/
+*.log
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
