@@ -1,10 +1,16 @@
 # shopify-automation-toolkit
 
-Toolkit Node.js réutilisable pour automatiser l'audit, le SEO, le contenu et la
-gestion des images d'une boutique Shopify, **piloté par fichiers de tâche**
-et alimenté par **Gemini** (Google AI Studio).
+[![Node.js](https://img.shields.io/badge/Node.js-%E2%89%A518-339933?logo=node.js&logoColor=white)](https://nodejs.org)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Shopify](https://img.shields.io/badge/Shopify-Admin%20GraphQL-95BF47?logo=shopify&logoColor=white)](https://shopify.dev/docs/api/admin-graphql)
+[![Powered by Gemini](https://img.shields.io/badge/AI-Gemini%203.1%20Flash-4285F4?logo=google&logoColor=white)](https://ai.google.dev/)
+[![No npm deps](https://img.shields.io/badge/dependencies-zero%20npm-success)](package.json)
 
-> Aucune dépendance npm. Uniquement Node.js (≥ 18) + le Shopify CLI.
+Toolkit Node.js réutilisable pour automatiser l'audit, le SEO, le contenu et la
+gestion des images d'une boutique Shopify, **piloté par fichiers de tâche
+Markdown** et alimenté par **Gemini 3.1** (texte / vision / image).
+
+> Aucune dépendance npm. Uniquement Node.js ≥ 18 et le Shopify CLI.
 
 ## Pourquoi ce toolkit
 
@@ -16,6 +22,28 @@ et alimenté par **Gemini** (Google AI Studio).
 | Régénérer une image produit | `images/image-generate.js` + Gemini Image |
 | Auditer la qualité des images | `images/visual-audit.js` + Gemini Vision |
 | Migrer des templates email Klaviyo → Shopify Email | `integrations/shopify-email/adapt-templates.js` |
+
+## Architecture en un coup d'œil
+
+```mermaid
+flowchart LR
+    ENV[".env<br/>credentials & marque"] --> CONFIG["lib/config.js"]
+    CONFIG --> CLI["Scripts CLI<br/>audit · seo · content · images"]
+    SHOPIFY[("Shopify Admin<br/>GraphQL")] -->|fetch| FETCH["fetch-store-data.js"]
+    FETCH --> STORE_DATA[("store-data/*.md<br/>source de vérité locale")]
+    STORE_DATA --> CLI
+    TASKS[("tasks/*.md<br/>intention décrite")] --> CLI
+    CLI -->|mutations idempotentes| SHOPIFY
+    CLI -->|prompts paramétrés| GEMINI[("Gemini 3.1<br/>Text · Vision · Image")]
+    GEMINI --> CLI
+    CLI -->|append résultats| TASKS
+```
+
+**3 piliers** :
+
+1. **`store-data/`** — extraction unique de la boutique en 9 fichiers Markdown (source de vérité locale, diffable, lisible).
+2. **`lib/` + scripts CLI** — 14 modules réutilisables (un fichier = une responsabilité) + commandes par domaine (`audit/`, `seo/`, `content/`, `images/`).
+3. **`tasks/`** — fichiers Markdown décrivant l'intention (Cible + Action + Validation), exécutés par les scripts génériques qui appendent leurs résultats.
 
 ## Installation (5 minutes)
 
@@ -167,6 +195,22 @@ Le dossier `.claude/skills/` contient 8 skills prêtes à l'emploi pour
 - [CLAUDE.md](CLAUDE.md) — **règles techniques critiques** à ne jamais violer
 - [ARCHITECTURE.md](ARCHITECTURE.md) — pourquoi store-data + scripts + tasks
 
+## Compétences démontrées
+
+- **Node.js « pur »** : aucun `npm install` requis. Uniquement les built-ins (`https`, `fs`, `child_process`, `readline`, `path`). 32 fichiers JS, ~3 500 lignes, zéro `node_modules/`.
+- **Shopify Admin GraphQL** : queries paginées (cursor `after`/`endCursor`), mutations idempotentes (`productUpdate`, `collectionUpdate`, `pageUpdate`, `productCreateMedia`, `productVariantsBulkUpdate`), staged uploads multipart (`stagedUploadsCreate`), gestion fine des scopes OAuth.
+- **Intégration LLM** : Gemini 3.1 Flash en 3 modes (Text pour rédaction de descriptions, Vision pour audit visuel d'images, Image pour génération multi-variantes avec image de référence), retry exponentiel sur rate limit 429/503, validation de la qualité (taille ≥ 50 KB, résolution ≥ 800×800).
+- **Architecture pilotée par fichiers** : tâches Markdown versionnables (traçabilité git-blame), mini-DSL de filtre (`status ACTIVE, images < 3, no_alt`), source de vérité locale `store-data/` (extraction unique → 9 fichiers MD diffables).
+- **Single Responsibility Principle** : `lib/` découpé en 14 modules ciblés (config, GraphQL, Gemini text/vision/image, pipeline image download/validate/upload, parsers task-file/store-data, filter-DSL, builders SEO/contenu/handle/livraison).
+- **Sécurité by design** : `.gitignore` strict (`.env`, `store-data/*.md`, `generated-images/*.jpg`), zéro PII dans les exports Klaviyo (compteurs agrégés uniquement), validation multi-étapes (dry-run → préview → confirmation → mutation), aucune mutation possible sans `--confirm`.
+- **Documentation portfolio-ready** : 7 docs spécifiques (Quick Start, Command Reference, Task Format, Gemini Setup, Shopify Auth, Troubleshooting, Skills) + README avec diagramme Mermaid + 8 skills Claude Code packagées pour partage.
+
 ## Licence
 
 MIT — voir [LICENSE](LICENSE).
+
+## Auteur
+
+**Rayan Djebar** — [djebar.rayan75@gmail.com](mailto:djebar.rayan75@gmail.com) · [GitHub](https://github.com/djebar-rayan)
+
+Projet réalisé pendant un stage Shopify, refondu en toolkit générique pour partage open source.

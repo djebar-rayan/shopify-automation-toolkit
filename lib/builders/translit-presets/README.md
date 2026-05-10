@@ -14,7 +14,7 @@ non-latins en ASCII. Chaque preset est un fichier `<nom>.json` au format :
 
 | Fichier | Script | Usage |
 |---|---|---|
-| `tifinagh.json` | Tifinagh / Néo-Tifinagh (Unicode 2D30–2D7F) | Boutiques publiant en tamazight |
+| `tifinagh.json` | Tifinagh / Néo-Tifinagh (Unicode 2D30–2D7F) | Boutiques publiant des contenus dans cet alphabet |
 
 ## Utilisation
 
