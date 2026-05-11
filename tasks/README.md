@@ -1,58 +1,58 @@
-# Fichiers de tâche
+# Task files
 
-Ce dossier contient les **fichiers de tâche** qui pilotent les scripts
-génériques (`audit/`, `content/`, `seo/`, `images/`).
+This folder contains the **task files** that drive the generic scripts
+(`audit/`, `content/`, `seo/`, `images/`).
 
-Chaque tâche est un fichier Markdown structuré qui décrit :
+Each task is a structured Markdown file that describes:
 
-- **Cible** — quel scope (products / collections / pages / redirects) et quel filtre
-- **Action** — type (`audit` / `update` / etc.), champ modifié, valeur (littérale ou prompt Gemini)
-- **Validation** — cases à cocher (vérification, dry-run, confirmation)
-- **Critères de succès** — comment valider que la tâche a réussi
-- **Résultats** — section auto-remplie par le script à la fin
+- **Target** — which scope (products / collections / pages / redirects) and which filter
+- **Action** — type (`audit` / `update` / …), field modified, value (literal or Gemini prompt)
+- **Validation** — checkboxes (pre-check, dry-run, confirmation)
+- **Success criteria** — how to validate the task
+- **Results** — automatically appended by the script
 
-## Fichiers fournis
+## Provided files
 
-| Fichier | Rôle |
+| File | Role |
 |---|---|
-| `_template.md` | Modèle commenté — copier pour créer une nouvelle tâche |
-| `example-audit-images.md` | Exemple fonctionnel — audit des produits < 3 images |
+| `_template.md` | Commented template — copy it to create a new task |
+| `example-audit-images.md` | Working example — audit products with < 3 images |
 
-## Règle de versionnage
+## Versioning rule
 
-- Les fichiers de tâche **utilisateur** (`task-*.md`) sont **gitignorés**.
-- Seuls le template (`_template.md`) et les exemples (`example-*.md`) sont versionnés.
+- **User** task files (`task-*.md`) are **gitignored**.
+- Only the template (`_template.md`) and the examples (`example-*.md`) are versioned.
 
-## Mini-DSL de filtre
+## Filter mini-DSL
 
-Combinable par virgule (= AND) :
+Combinable with comma (= AND):
 
 ```
-tous                          → toutes les entités
-handle X                      → entité dont le handle = X
-handles X, Y, Z               → entités dont le handle ∈ {X,Y,Z}
-tag X                         → entités taggées X
-status ACTIVE|DRAFT|ARCHIVED  → produits avec ce statut
-images < N                    → produits avec moins de N images
-images > N                    → produits avec plus de N images
-images = 0                    → produits sans aucune image
-desc_words < N                → descriptions avec moins de N mots
-desc_words > N                → descriptions avec plus de N mots
-seo_title manquant            → meta title SEO absent
-seo_description manquant      → meta description SEO absente
-no_alt                        → au moins une image sans alt
-variants > N                  → produits avec plus de N variantes
-vendor X                      → produits du vendor X
+all                           → every entity
+handle X                      → entity whose handle = X
+handles X, Y, Z               → entities whose handle ∈ {X,Y,Z}
+tag X                         → entities tagged X
+status ACTIVE|DRAFT|ARCHIVED  → products with this status
+images < N                    → products with fewer than N images
+images > N                    → products with more than N images
+images = 0                    → products with no image
+desc_words < N                → descriptions shorter than N words
+desc_words > N                → descriptions longer than N words
+seo_title missing             → missing SEO meta title
+seo_description missing       → missing SEO meta description
+no_alt                        → at least one image without alt
+variants > N                  → products with more than N variants
+vendor X                      → products from vendor X
 ```
 
-Exemple : `status ACTIVE, images < 3, no_alt` cible les produits actifs
-ayant moins de 3 images **et** au moins une image sans alt.
+Example: `status ACTIVE, images < 3, no_alt` matches the active products
+with fewer than 3 images **and** at least one image without alt.
 
-## Cycle de vie d'une tâche
+## Task lifecycle
 
-1. **Créer** : `cp tasks/_template.md tasks/task-001-mon-action.md`
-2. **Remplir** : ouvrir, modifier les sections Cible / Action / Validation
-3. **Tester en lecture seule** : `node audit/audit.js --task tasks/task-001-mon-action.md`
-4. **Appliquer** : `node content/update-products.js --task tasks/task-001-mon-action.md`
-5. **Constater** : la section `## Résultats` est remplie automatiquement
-6. **Re-fetch** : `node fetch-store-data.js` pour rafraîchir `store-data/`
+1. **Create**: `cp tasks/_template.md tasks/task-001-my-action.md`
+2. **Fill in**: open it, modify the Target / Action / Validation sections
+3. **Test read-only**: `node audit/audit.js --task tasks/task-001-my-action.md`
+4. **Apply**: `node content/update-products.js --task tasks/task-001-my-action.md`
+5. **Inspect**: the `## Results` section is populated automatically
+6. **Re-fetch**: `node fetch-store-data.js` to refresh `store-data/`

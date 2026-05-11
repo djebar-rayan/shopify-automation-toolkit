@@ -1,9 +1,9 @@
 # Command Reference
 
-Toutes les commandes CLI exposées par le toolkit, avec leurs flags.
+Every CLI command exposed by the toolkit, with its flags.
 
-> Toute commande accepte le flag `--yes` pour sauter les prompts de confirmation
-> (à utiliser avec prudence — préférer le dry-run).
+> Any command accepts `--yes` to skip the confirmation prompts (use
+> with caution — prefer the dry-run).
 
 ---
 
@@ -11,9 +11,9 @@ Toutes les commandes CLI exposées par le toolkit, avec leurs flags.
 
 ### `node fetch-store-data.js`
 
-Extrait l'état complet de la boutique → `store-data/*.md`.
+Extracts the complete store state → `store-data/*.md`.
 
-Pas de flags — relit `.env`. Réexécutable autant de fois que nécessaire.
+No flag — reads `.env`. Re-runnable as often as needed.
 
 ---
 
@@ -21,19 +21,19 @@ Pas de flags — relit `.env`. Réexécutable autant de fois que nécessaire.
 
 ### `node audit/audit.js`
 
-Audit générique read-only. Liste les entités matchées + flags.
+Generic read-only audit. Lists the matched entities + their flags.
 
-| Flag | Effet |
+| Flag | Effect |
 |---|---|
-| `--task <fichier.md>` | Lit la tâche (recommandé) |
-| `--scope products\|collections\|pages\|redirects` | Sans tâche : choisit le scope |
-| `--filter "<dsl>"` | Sans tâche : applique un filtre (cf. mini-DSL) |
+| `--task <file.md>` | Read the task (recommended) |
+| `--scope products\|collections\|pages\|redirects` | Without task: pick a scope |
+| `--filter "<dsl>"` | Without task: apply a filter (see mini-DSL) |
 
 ### `node audit/full-audit.js`
 
-Audit complet avec scoring (SEO/UX/Contenu/Opérations).
+Full audit with scoring (SEO / UX / Content / Operations).
 
-Sortie : `audit-report.md` à la racine.
+Output: `audit-report.md` at the repo root.
 
 ---
 
@@ -41,52 +41,52 @@ Sortie : `audit-report.md` à la racine.
 
 ### `node seo/seo-update.js`
 
-Génère et applique des meta SEO via les **formules locales** de
-`lib/builders/seo-meta.js` (sans Gemini, gratuit, déterministe).
+Generates and applies SEO meta using the **local formulas** from
+`lib/builders/seo-meta.js` (no Gemini, free, deterministic).
 
-| Flag | Effet |
+| Flag | Effect |
 |---|---|
-| `--target=titles\|descriptions\|alt` | Type de meta à générer (défaut: `titles`) |
-| `--filter "<dsl>"` | Override du filtre par défaut |
-| `--confirm` | Applique réellement (sinon dry-run) |
-| `--mode=vision` (cible `alt`) | Génère les alt via Gemini Vision (analyse de l'image) |
+| `--target=titles\|descriptions\|alt` | Which meta to generate (default: `titles`) |
+| `--filter "<dsl>"` | Override the default filter |
+| `--confirm` | Actually apply (otherwise dry-run) |
+| `--mode=vision` (with `alt`) | Generate alts via Gemini Vision (image analysis) |
 
 ---
 
-## Contenu
+## Content
 
 ### `node content/update-products.js`
 
-Mise à jour générique des produits, pilotée par fichier de tâche.
+Generic product update, driven by a task file.
 
-| Flag | Effet |
+| Flag | Effect |
 |---|---|
-| `--task <fichier.md>` | **Obligatoire** |
-| `--yes` | Saute la confirmation |
+| `--task <file.md>` | **Required** |
+| `--yes` | Skip the confirmation |
 
-Champs supportés : `descriptionHtml`, `seo.title`, `seo.description`, `tags`,
-`handle`, `status`.
+Supported fields: `descriptionHtml`, `seo.title`, `seo.description`,
+`tags`, `handle`, `status`.
 
 ### `node content/update-collections.js`
 
-Idem pour les collections. Champs : `descriptionHtml`, `seo.title`,
+Same for collections. Fields: `descriptionHtml`, `seo.title`,
 `seo.description`, `handle`.
 
 ### `node content/update-pages.js`
 
-Idem pour les pages CMS. Champs : `body`, `seo.title`, `seo.description`,
+Same for CMS pages. Fields: `body`, `seo.title`, `seo.description`,
 `handle`, `title`.
 
 ### `node content/handle-normalize.js`
 
-Normalise les handles non-ASCII en kebab-case ASCII.
+Normalizes non-ASCII handles into ASCII kebab-case.
 
-| Flag | Effet |
+| Flag | Effect |
 |---|---|
-| (aucun) | Dry-run |
-| `--confirm` | Applique |
-| `--map=<file.json>` | Preset de translittération (ex: `lib/builders/translit-presets/tifinagh.json`) |
-| `--yes` | Saute la confirmation |
+| (none) | Dry-run |
+| `--confirm` | Apply |
+| `--map=<file.json>` | Transliteration preset (e.g. `lib/builders/translit-presets/tifinagh.json`) |
+| `--yes` | Skip the confirmation |
 
 ---
 
@@ -94,88 +94,88 @@ Normalise les handles non-ASCII en kebab-case ASCII.
 
 ### `node images/image-audit.js`
 
-Comptage et qualité des images (alt manquants, < seuil).
+Image count + quality (missing alts, < threshold).
 
-| Flag | Effet |
+| Flag | Effect |
 |---|---|
-| `--task <fichier.md>` | Audit piloté |
-| `--filter "<dsl>"` | Audit ad-hoc |
+| `--task <file.md>` | Task-driven audit |
+| `--filter "<dsl>"` | Ad-hoc audit |
 
 ### `node images/image-alt.js`
 
-Met à jour les alt texts manquants.
+Updates the missing alt texts.
 
-| Flag | Effet |
+| Flag | Effect |
 |---|---|
-| `--filter "<dsl>"` | Défaut: `status ACTIVE, no_alt` |
-| `--mode=formula\|vision` | Source du texte (défaut: `formula`) |
-| `--confirm` | Applique |
+| `--filter "<dsl>"` | Default: `status ACTIVE, no_alt` |
+| `--mode=formula\|vision` | Text source (default: `formula`) |
+| `--confirm` | Apply |
 
 ### `node images/image-generate.js`
 
-Génère des images via Gemini Image. Sauvegarde locale dans `generated-images/`.
+Generates images via Gemini Image. Saved locally in `generated-images/`.
 
-| Flag | Effet |
+| Flag | Effect |
 |---|---|
-| `--mode=single\|multi-variant` | Mode (défaut: `single`) |
-| `--handle=<product-handle>` | **Obligatoire** |
-| `--prompt="…"` | Prompt utilisateur (sinon défaut) |
-| `--canonical=<idx>` | (multi-variant) image canonique (défaut: 0) |
-| `--only="V1, V2"` | Limite aux variantes nommées |
-| `--skip="V3"` | Saute ces variantes |
-| `--retries=<n>` | Nombre de tentatives (défaut: `MAX_RETRIES`) |
-| `--no-improve` | N'améliore pas le prompt via Gemini Text |
-| `--dry-run` | N'appelle pas Gemini |
+| `--mode=single\|multi-variant` | Mode (default: `single`) |
+| `--handle=<product-handle>` | **Required** |
+| `--prompt="…"` | User prompt (otherwise default) |
+| `--canonical=<idx>` | (multi-variant) canonical image (default: 0) |
+| `--only="V1, V2"` | Limit to these named variants |
+| `--skip="V3"` | Skip these variants |
+| `--retries=<n>` | Retry count (default: `MAX_RETRIES`) |
+| `--no-improve` | Do not improve the prompt via Gemini Text |
+| `--dry-run` | Do not call Gemini |
 
 ### `node images/image-upload.js`
 
-Upload des images locales vers Shopify (staged upload + `productCreateMedia`).
+Uploads local images to Shopify (staged upload + `productCreateMedia`).
 
-| Flag | Effet |
+| Flag | Effect |
 |---|---|
-| `--handle=<product-handle>` | **Obligatoire** |
-| `--file=<path>` | Un seul fichier |
-| `--dir=<path>` | Tous les `*.jpg/png/webp` du dossier |
-| `--confirm` | Applique réellement |
-| `--link-variants` | Lie chaque image à la variante dont le titre matche le nom de fichier |
-| `--delete-old` | Supprime les anciennes images après upload (**IRREVERSIBLE**) |
+| `--handle=<product-handle>` | **Required** |
+| `--file=<path>` | One single file |
+| `--dir=<path>` | All `*.jpg/png/webp` in the folder |
+| `--confirm` | Actually apply |
+| `--link-variants` | Bind each image to the variant whose title matches the filename |
+| `--delete-old` | Delete previous images after upload (**IRREVERSIBLE**) |
 
 ### `node images/visual-audit.js`
 
-Audit qualité d'image via Gemini Vision (`ADEQUATE` / `A_REMPLACER` / `NO_IMAGE`).
+Image quality audit via Gemini Vision (`ADEQUATE` / `REPLACE` / `NO_IMAGE`).
 
-| Flag | Effet |
+| Flag | Effect |
 |---|---|
-| `--filter "<dsl>"` | Défaut: `status ACTIVE` |
-| `--refresh` | Ignore le cache JSON et ré-appelle Gemini |
+| `--filter "<dsl>"` | Default: `status ACTIVE` |
+| `--refresh` | Ignore the JSON cache and re-call Gemini |
 
-Sortie : `visual-audit-report.md` + cache `.audit-tmp/visual-audit.json`.
+Output: `visual-audit-report.md` + cache `.audit-tmp/visual-audit.json`.
 
 ---
 
-## Intégrations
+## Integrations
 
 ### `node integrations/klaviyo/klaviyo-export.js`
 
-Export read-only Klaviyo → MD + templates HTML.
+Read-only Klaviyo export → Markdown + HTML templates.
 
-Variables requises : `KLAVIYO_API_KEY=pk_...` dans `.env`.
+Required env var: `KLAVIYO_API_KEY=pk_...` in `.env`.
 
 ### `node integrations/shopify-email/adapt-templates.js`
 
-Adapte les templates HTML Klaviyo pour Shopify Email.
+Adapts Klaviyo HTML templates for Shopify Email.
 
-| Flag | Effet |
+| Flag | Effect |
 |---|---|
-| `--src=<dir>` | Dossier source (défaut: `../klaviyo/templates/`) |
-| `--out=<dir>` | Dossier de sortie (défaut: `./templates-adapted/`) |
-| `--mapping=<file.json>` | Substitutions custom de variables |
+| `--src=<dir>` | Source folder (default: `../klaviyo/templates/`) |
+| `--out=<dir>` | Output folder (default: `./templates-adapted/`) |
+| `--mapping=<file.json>` | Custom variable substitutions |
 
 ---
 
-## Raccourcis npm
+## npm shortcuts
 
-| Commande | Équivalent |
+| Command | Equivalent |
 |---|---|
 | `npm run fetch` | `node fetch-store-data.js` |
 | `npm run audit` | `node audit/audit.js` |
@@ -184,4 +184,4 @@ Adapte les templates HTML Klaviyo pour Shopify Email.
 | `npm run image:visual-audit` | `node images/visual-audit.js` |
 | `npm run klaviyo:export` | `node integrations/klaviyo/klaviyo-export.js` |
 | `npm run klaviyo:adapt` | `node integrations/shopify-email/adapt-templates.js` |
-| `npm run syntax-check` | `node -c` sur tous les `*.js` |
+| `npm run syntax-check` | `node -c` on every `*.js` |

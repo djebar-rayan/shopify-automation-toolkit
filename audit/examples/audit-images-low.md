@@ -1,29 +1,29 @@
-# Audit — Produits avec moins de 3 images
+# Audit — Products with fewer than 3 images
 
-**Script utilisé** : `audit/audit.js`
-**Fichiers de référence lus** : `store-data/products.md`
+**Script used**: `audit/audit.js`
+**Reference files read**: `store-data/products.md`
 
-## Cible
+## Target
 
-- **Scope** : products
-- **Filtre** : status ACTIVE, images < 3
-- **Nb entités concernées** : 0 (recalculé par le script)
+- **Scope**: products
+- **Filter**: status ACTIVE, images < 3
+- **Entities affected**: 0 (recomputed by the script)
 
 ## Action
 
-- **Type** : audit
-- **Champ modifié** : —
-- **Valeur** : —
+- **Type**: audit
+- **Field**: —
+- **Value**: —
 
-## Validation avant application
+## Validation
 
-- [x] Vérifier que les entités cibles sont bien dans `store-data/products.md`
-- [ ] Afficher les changements prévus avant d'appliquer (non applicable)
-- [ ] Demander confirmation `o/N` avant la mutation (non applicable)
+- [x] Verify target entities are in `store-data/products.md`
+- [ ] Show planned changes (dry-run) — not applicable
+- [ ] Ask confirmation y/N before mutation — not applicable
 
-## Critères de succès
+## Success criteria
 
-- Un compte des produits actifs avec moins de 3 images est restitué
-- Aucune mutation Shopify déclenchée
+- A count of active products with fewer than 3 images is produced
+- No Shopify mutation triggered
 
-## Résultats
+## Results

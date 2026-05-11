@@ -1,18 +1,18 @@
 'use strict';
 
 // ============================================================
-// content/handle-normalize.js — Normalise les handles produits
+// content/handle-normalize.js — Normalize product handles
 // ------------------------------------------------------------
-// Détecte les produits dont le handle contient des caractères
-// non-ASCII et génère un nouveau handle ASCII conforme ([a-z0-9-]+).
+// Detects products whose handle contains non-ASCII characters and
+// produces an ASCII-compliant handle ([a-z0-9-]+).
 //
-// Les diacritiques latins (é, ç, à, ñ…) sont gérés nativement.
-// Pour les alphabets non-latins, fournir un preset de translittération
-// avec --map=<file.json> (ex: lib/builders/translit-presets/tifinagh.json).
+// Latin diacritics (é, ç, à, ñ…) are handled natively.
+// For non-Latin scripts, pass a transliteration preset via
+// --map=<file.json> (e.g. lib/builders/translit-presets/tifinagh.json).
 //
-// Mode par défaut : dry-run.
+// Default mode: dry-run.
 //
-// Usage :
+// Usage:
 //   node content/handle-normalize.js
 //   node content/handle-normalize.js --confirm
 //   node content/handle-normalize.js --confirm --yes
@@ -34,8 +34,8 @@ async function main() {
   const customMap = mapFile ? JSON.parse(fs.readFileSync(mapFile, 'utf8')) : null;
 
   console.log(`\n━━━ handle-normalize ━━━`);
-  console.log(`  Mode : ${apply ? 'APPLIQUER (--confirm)' : 'dry-run'}`);
-  if (customMap) console.log(`  Map custom : ${path.basename(mapFile)} (${Object.keys(customMap).length} entrées)`);
+  console.log(`  Mode: ${apply ? 'APPLY (--confirm)' : 'dry-run'}`);
+  if (customMap) console.log(`  Custom map: ${path.basename(mapFile)} (${Object.keys(customMap).length} entries)`);
   console.log();
 
   const blocks = parseStoreDataBlocks('products.md');
@@ -50,22 +50,22 @@ async function main() {
     .filter(c => c.newHandle && c.newHandle !== c.oldHandle);
 
   if (!candidates.length) {
-    console.log('  ✅ Aucun handle non-ASCII détecté.');
+    console.log('  ✅ No non-ASCII handle detected.');
     return;
   }
 
-  console.log(`  ${candidates.length} produit(s) à renommer :`);
+  console.log(`  ${candidates.length} product(s) to rename:`);
   for (const c of candidates) {
     console.log(`    • ${c.oldHandle.padEnd(40)} → ${c.newHandle}`);
   }
 
   if (!apply) {
-    console.log('\n  (dry-run terminé — relancer avec --confirm pour appliquer)\n');
+    console.log('\n  (dry-run completed — rerun with --confirm to apply)\n');
     return;
   }
 
-  const ok = await confirm(`\n  Appliquer ${candidates.length} renommages ?`, true);
-  if (!ok) { console.log('  Annulé.'); return; }
+  const ok = await confirm(`\n  Apply ${candidates.length} renames?`, true);
+  if (!ok) { console.log('  Cancelled.'); return; }
 
   const MUTATION = `
     mutation Rename($input: ProductInput!) {
@@ -91,10 +91,10 @@ async function main() {
     await sleep(config.DELAY_SHOPIFY);
   }
 
-  console.log(`\n  Résultat : ${okCount} ok, ${errors} erreur(s).`);
-  console.log('  ⚠️  Shopify crée automatiquement des redirections 301 depuis les anciens handles.');
-  console.log('  Re-fetch recommandé : node fetch-store-data.js');
-  console.log('\n━━━ Fin handle-normalize ━━━\n');
+  console.log(`\n  Result: ${okCount} ok, ${errors} error(s).`);
+  console.log('  ⚠️  Shopify automatically creates 301 redirects from the old handles.');
+  console.log('  Re-fetch recommended: node fetch-store-data.js');
+  console.log('\n━━━ End handle-normalize ━━━\n');
 }
 
 main().catch(e => { console.error('FATAL:', e.message); process.exit(1); });

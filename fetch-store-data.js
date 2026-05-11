@@ -1,22 +1,22 @@
 'use strict';
 
 // ============================================================
-// fetch-store-data.js — Extraction initiale d'une boutique Shopify
+// fetch-store-data.js — Initial extraction of a Shopify store
 // ------------------------------------------------------------
-// Lit lib/config.js (qui charge .env) et peuple le dossier
-// store-data/ avec un fichier MD par catégorie de données :
-//   - products.md       (paginé)
-//   - collections.md    (paginé)
-//   - customers.md      (agrégat anonymisé, requiert read_customers)
-//   - orders.md         (agrégat, requiert read_orders)
-//   - pages.md          (paginé)
-//   - metafields.md     (synthèse par namespace, déduit des produits)
-//   - redirects.md      (paginé jusqu'à 250)
-//   - navigation.md     (stub — endpoint menus indisponible via store execute)
-//   - store-meta.md     (snapshot global)
+// Reads lib/config.js (which loads .env) and populates the
+// store-data/ folder with one Markdown file per data category:
+//   - products.md       (paginated)
+//   - collections.md    (paginated)
+//   - customers.md      (anonymized aggregate, requires read_customers)
+//   - orders.md         (aggregate, requires read_orders)
+//   - pages.md          (paginated)
+//   - metafields.md     (synthesis per namespace, derived from products)
+//   - redirects.md      (paginated up to 250)
+//   - navigation.md     (stub — menus endpoint unavailable via store execute)
+//   - store-meta.md     (global snapshot)
 //
-// Aucune mutation Shopify. Lecture seule. Réexécutable autant de
-// fois que nécessaire pour rafraîchir la source de vérité locale.
+// No Shopify mutation. Read-only. Re-run as often as needed to
+// refresh the local source of truth.
 // ============================================================
 
 const fs = require('fs');
@@ -41,9 +41,9 @@ function nowIso() { return new Date().toISOString(); }
 function header(title, sourceCmd, extraLines) {
   return [
     `# ${title}`,
-    `**Dernière extraction** : ${nowIso()}`,
-    `**Source** : ${sourceCmd}`,
-    `**Boutique** : ${STORE}`,
+    `**Last extraction**: ${nowIso()}`,
+    `**Source**: ${sourceCmd}`,
+    `**Store**: ${STORE}`,
     ...(extraLines || []),
     '',
     '---',
@@ -94,23 +94,23 @@ const PRODUCTS_QUERY = `
 `;
 
 async function fetchAllProducts() {
-  console.log('[1/9] Extraction des produits...');
+  console.log('[1/9] Fetching products...');
   const all = [];
   let cursor = null, page = 0;
   do {
     page++;
     process.stdout.write(`  page ${page}…`);
     const res = execGql(PRODUCTS_QUERY, { first: 50, after: cursor });
-    if (res._error) { console.log(` erreur GraphQL : ${res._msg || res._error}`); break; }
+    if (res._error) { console.log(` GraphQL error: ${res._msg || res._error}`); break; }
     const edges = res?.products?.edges || [];
     for (const e of edges) all.push(e.node);
     const pi = res?.products?.pageInfo || {};
     cursor = pi.hasNextPage ? pi.endCursor : null;
-    console.log(` ${edges.length} → cumul ${all.length}`);
+    console.log(` ${edges.length} → total ${all.length}`);
     if (cursor) await sleep(PAGE_DELAY_MS);
   } while (cursor);
 
-  const lines = [header('Produits', '`fetch-store-data.js`', [`**Total** : ${all.length}`])];
+  const lines = [header('Products', '`fetch-store-data.js`', [`**Total**: ${all.length}`])];
   for (const p of all) {
     const media = (p.media?.edges || []).map(e => e.node);
     const variants = (p.variants?.edges || []).map(e => e.node);
@@ -126,27 +126,27 @@ async function fetchAllProducts() {
       : '—';
 
     lines.push(`## ${p.title}`);
-    lines.push(`- **ID** : ${p.id}`);
-    lines.push(`- **Handle** : \`${p.handle}\``);
-    lines.push(`- **Statut** : ${p.status}`);
-    lines.push(`- **Type** : ${p.productType || '—'}`);
-    lines.push(`- **Vendor** : ${p.vendor || '—'}`);
-    lines.push(`- **Tags** : ${(p.tags || []).join(', ') || '—'}`);
-    lines.push(`- **Prix** : ${priceLine}`);
-    lines.push(`- **Nb images** : ${media.filter(m => m.mediaContentType === 'IMAGE').length}`);
-    lines.push(`- **Nb variantes** : ${variants.length}`);
-    lines.push(`- **SEO title** : ${p.seo?.title ? escapeMd(p.seo.title) : '_(absent)_'}`);
-    lines.push(`- **SEO description** : ${p.seo?.description ? escapeMd(p.seo.description) : '_(absent)_'}`);
-    lines.push(`- **Mots description** : ${wc}`);
-    lines.push(`- **Description** :`);
+    lines.push(`- **ID**: ${p.id}`);
+    lines.push(`- **Handle**: \`${p.handle}\``);
+    lines.push(`- **Status**: ${p.status}`);
+    lines.push(`- **Type**: ${p.productType || '—'}`);
+    lines.push(`- **Vendor**: ${p.vendor || '—'}`);
+    lines.push(`- **Tags**: ${(p.tags || []).join(', ') || '—'}`);
+    lines.push(`- **Price**: ${priceLine}`);
+    lines.push(`- **Image count**: ${media.filter(m => m.mediaContentType === 'IMAGE').length}`);
+    lines.push(`- **Variant count**: ${variants.length}`);
+    lines.push(`- **SEO title**: ${p.seo?.title ? escapeMd(p.seo.title) : '_(missing)_'}`);
+    lines.push(`- **SEO description**: ${p.seo?.description ? escapeMd(p.seo.description) : '_(missing)_'}`);
+    lines.push(`- **Description words**: ${wc}`);
+    lines.push(`- **Description**:`);
     lines.push('  > ' + escapeMd(trunc(stripHtml(desc), 500)));
     lines.push('');
     if (variants.length) {
-      lines.push('### Variantes');
-      lines.push('| ID | Titre | SKU | Prix | Stock | Image |');
+      lines.push('### Variants');
+      lines.push('| ID | Title | SKU | Price | Stock | Image |');
       lines.push('|---|---|---|---|---|---|');
       for (const v of variants) {
-        lines.push(`| ${v.id} | ${escapeMd(v.title)} | ${v.sku || '—'} | ${v.price || '—'} | ${v.inventoryQuantity ?? '—'} | ${v.image ? 'oui' : 'non'} |`);
+        lines.push(`| ${v.id} | ${escapeMd(v.title)} | ${v.sku || '—'} | ${v.price || '—'} | ${v.inventoryQuantity ?? '—'} | ${v.image ? 'yes' : 'no'} |`);
       }
       lines.push('');
     }
@@ -155,13 +155,13 @@ async function fetchAllProducts() {
       lines.push('| ID | URL | Alt |');
       lines.push('|---|---|---|');
       for (const m of media.filter(m => m.mediaContentType === 'IMAGE')) {
-        lines.push(`| ${m.id} | ${m.image?.url || '—'} | ${escapeMd(m.alt || '_(absent)_')} |`);
+        lines.push(`| ${m.id} | ${m.image?.url || '—'} | ${escapeMd(m.alt || '_(missing)_')} |`);
       }
       lines.push('');
     }
     if (metas.length) {
       lines.push('### Metafields');
-      lines.push('| Namespace | Key | Type | Valeur (tronquée 80c) |');
+      lines.push('| Namespace | Key | Type | Value (truncated 80c) |');
       lines.push('|---|---|---|---|');
       for (const m of metas) {
         lines.push(`| ${m.namespace} | ${m.key} | ${m.type} | ${escapeMd(trunc(m.value || '', 80))} |`);
@@ -194,36 +194,36 @@ const COLLECTIONS_QUERY = `
 `;
 
 async function fetchAllCollections() {
-  console.log('[2/9] Extraction des collections...');
+  console.log('[2/9] Fetching collections...');
   const all = [];
   let cursor = null, page = 0;
   do {
     page++;
     process.stdout.write(`  page ${page}…`);
     const res = execGql(COLLECTIONS_QUERY, { first: 50, after: cursor });
-    if (res._error) { console.log(` erreur GraphQL : ${res._msg || res._error}`); break; }
+    if (res._error) { console.log(` GraphQL error: ${res._msg || res._error}`); break; }
     const edges = res?.collections?.edges || [];
     for (const e of edges) all.push(e.node);
     const pi = res?.collections?.pageInfo || {};
     cursor = pi.hasNextPage ? pi.endCursor : null;
-    console.log(` ${edges.length} → cumul ${all.length}`);
+    console.log(` ${edges.length} → total ${all.length}`);
     if (cursor) await sleep(PAGE_DELAY_MS);
   } while (cursor);
 
-  const lines = [header('Collections', '`fetch-store-data.js`', [`**Total** : ${all.length}`])];
+  const lines = [header('Collections', '`fetch-store-data.js`', [`**Total**: ${all.length}`])];
   for (const c of all) {
     const desc = c.descriptionHtml || '';
     const wc = wordCount(stripHtml(desc));
     lines.push(`## ${c.title}`);
-    lines.push(`- **ID** : ${c.id}`);
-    lines.push(`- **Handle** : \`${c.handle}\``);
-    lines.push(`- **Nb produits** : ${c.productsCount?.count ?? '—'}`);
-    lines.push(`- **Description** : ${wc > 0 ? `oui (${wc} mots)` : 'non'}`);
-    lines.push(`- **Image** : ${c.image?.url ? 'oui' : 'non'}`);
-    lines.push(`- **SEO title** : ${c.seo?.title ? escapeMd(c.seo.title) : '_(absent)_'}`);
-    lines.push(`- **SEO description** : ${c.seo?.description ? escapeMd(c.seo.description) : '_(absent)_'}`);
+    lines.push(`- **ID**: ${c.id}`);
+    lines.push(`- **Handle**: \`${c.handle}\``);
+    lines.push(`- **Product count**: ${c.productsCount?.count ?? '—'}`);
+    lines.push(`- **Description**: ${wc > 0 ? `yes (${wc} words)` : 'no'}`);
+    lines.push(`- **Image**: ${c.image?.url ? 'yes' : 'no'}`);
+    lines.push(`- **SEO title**: ${c.seo?.title ? escapeMd(c.seo.title) : '_(missing)_'}`);
+    lines.push(`- **SEO description**: ${c.seo?.description ? escapeMd(c.seo.description) : '_(missing)_'}`);
     if (desc) {
-      lines.push(`- **Description (extrait)** :`);
+      lines.push(`- **Description (excerpt)**:`);
       lines.push('  > ' + escapeMd(trunc(stripHtml(desc), 300)));
     }
     lines.push('');
@@ -235,28 +235,28 @@ async function fetchAllCollections() {
 }
 
 // ============================================================
-// 3. CUSTOMERS — agrégat anonymisé (requiert read_customers)
+// 3. CUSTOMERS — anonymized aggregate (requires read_customers)
 // ============================================================
 async function fetchCustomers() {
-  console.log('[3/9] Extraction agrégat clients...');
+  console.log('[3/9] Fetching customers aggregate...');
   const probe = execGql(`query { customers(first: 1) { edges { node { id } } } }`);
   if (isAccessDenied(probe) || probe._error) {
     const msg = probe._msg || probe._error || '';
-    console.log(`  ⚠️  scope read_customers indisponible — fichier stub écrit.`);
+    console.log(`  ⚠️  scope read_customers unavailable — stub written.`);
     const lines = [
-      header('Clients (agrégat)', '`fetch-store-data.js`', ['**Statut** : extraction non disponible']),
-      '## ⚠️ Scope OAuth manquant',
+      header('Customers (aggregate)', '`fetch-store-data.js`', ['**Status**: extraction unavailable']),
+      '## ⚠️ Missing OAuth scope',
       '',
-      'L\'extraction des clients nécessite le scope `read_customers`, absent du token actuel.',
+      'Customer extraction requires the `read_customers` scope, which is not granted on the current token.',
       '',
-      'Pour activer cette extraction :',
+      'To enable this extraction:',
       '',
       '```bash',
       `shopify store auth --store ${STORE} \\`,
       '  --scopes read_products,write_products,read_content,write_content,read_themes,write_files,read_customers,read_orders',
       '```',
       '',
-      `Détail technique de l'erreur : \`${trunc(escapeMd(msg), 200)}\``,
+      `Technical detail: \`${trunc(escapeMd(msg), 200)}\``,
       '',
     ];
     writeFile('customers.md', lines.join('\n'));
@@ -280,12 +280,12 @@ async function fetchCustomers() {
     page++;
     process.stdout.write(`  page ${page}…`);
     const res = execGql(QUERY, { first: 100, after: cursor });
-    if (res._error) { console.log(` erreur GraphQL : ${res._msg || res._error}`); break; }
+    if (res._error) { console.log(` GraphQL error: ${res._msg || res._error}`); break; }
     const edges = res?.customers?.edges || [];
     for (const e of edges) all.push(e.node);
     const pi = res?.customers?.pageInfo || {};
     cursor = pi.hasNextPage ? pi.endCursor : null;
-    console.log(` ${edges.length} → cumul ${all.length}`);
+    console.log(` ${edges.length} → total ${all.length}`);
     if (cursor) await sleep(PAGE_DELAY_MS);
   } while (cursor);
 
@@ -303,16 +303,16 @@ async function fetchCustomers() {
   for (const c of all) for (const t of (c.tags || [])) tagSet.add(t);
 
   const lines = [
-    header('Clients (agrégat anonymisé)', '`fetch-store-data.js`', [`**Total** : ${total}`]),
-    '## Résumé clients',
-    `- **Total clients** : ${total}`,
-    `- **Clients avec email** : ${withEmail}`,
-    `- **Clients avec commandes** : ${withOrders}`,
-    `- **Clients sans commande** : ${noOrders}`,
-    `- **Top pays** : ${topCountries.map(([k, v]) => `${k} (${Math.round(v / total * 100)}%)`).join(', ') || '—'}`,
-    `- **Tags clients utilisés** : ${[...tagSet].join(', ') || '_(aucun)_'}`,
+    header('Customers (anonymized aggregate)', '`fetch-store-data.js`', [`**Total**: ${total}`]),
+    '## Customer summary',
+    `- **Total customers**: ${total}`,
+    `- **Customers with email**: ${withEmail}`,
+    `- **Customers with orders**: ${withOrders}`,
+    `- **Customers without orders**: ${noOrders}`,
+    `- **Top countries**: ${topCountries.map(([k, v]) => `${k} (${Math.round(v / total * 100)}%)`).join(', ') || '—'}`,
+    `- **Customer tags used**: ${[...tagSet].join(', ') || '_(none)_'}`,
     '',
-    '> Aucune donnée personnelle n\'est exportée (e-mails, noms, adresses).',
+    '> No personal data is exported (emails, names, addresses).',
     '',
   ];
   writeFile('customers.md', lines.join('\n'));
@@ -320,21 +320,21 @@ async function fetchCustomers() {
 }
 
 // ============================================================
-// 4. ORDERS — agrégat (requiert read_orders)
+// 4. ORDERS — aggregate (requires read_orders)
 // ============================================================
 async function fetchOrders() {
-  console.log('[4/9] Extraction agrégat commandes...');
+  console.log('[4/9] Fetching orders aggregate...');
   const probe = execGql(`query { orders(first: 1) { edges { node { id } } } }`);
   if (isAccessDenied(probe) || probe._error) {
     const msg = probe._msg || probe._error || '';
-    console.log(`  ⚠️  scope read_orders indisponible — fichier stub écrit.`);
+    console.log(`  ⚠️  scope read_orders unavailable — stub written.`);
     const lines = [
-      header('Commandes (agrégat)', '`fetch-store-data.js`', ['**Statut** : extraction non disponible']),
-      '## ⚠️ Scope OAuth manquant',
+      header('Orders (aggregate)', '`fetch-store-data.js`', ['**Status**: extraction unavailable']),
+      '## ⚠️ Missing OAuth scope',
       '',
-      'L\'extraction des commandes nécessite le scope `read_orders`.',
+      'Order extraction requires the `read_orders` scope.',
       '',
-      `Détail technique : \`${trunc(escapeMd(msg), 200)}\``,
+      `Technical detail: \`${trunc(escapeMd(msg), 200)}\``,
       '',
     ];
     writeFile('orders.md', lines.join('\n'));
@@ -364,12 +364,12 @@ async function fetchOrders() {
     page++;
     process.stdout.write(`  page ${page}…`);
     const res = execGql(QUERY, { first: 100, after: cursor });
-    if (res._error) { console.log(` erreur GraphQL : ${res._msg || res._error}`); break; }
+    if (res._error) { console.log(` GraphQL error: ${res._msg || res._error}`); break; }
     const edges = res?.orders?.edges || [];
     for (const e of edges) all.push(e.node);
     const pi = res?.orders?.pageInfo || {};
     cursor = pi.hasNextPage ? pi.endCursor : null;
-    console.log(` ${edges.length} → cumul ${all.length}`);
+    console.log(` ${edges.length} → total ${all.length}`);
     if (cursor) await sleep(PAGE_DELAY_MS);
   } while (cursor);
 
@@ -383,7 +383,7 @@ async function fetchOrders() {
     const f = o.displayFulfillmentStatus || 'UNKNOWN';
     fulfillmentCounts[f] = (fulfillmentCounts[f] || 0) + 1;
     for (const li of (o.lineItems?.edges || [])) {
-      const t = li.node.product?.title || '_(produit supprimé)_';
+      const t = li.node.product?.title || '_(deleted product)_';
       productSales[t] = (productSales[t] || 0) + (li.node.quantity || 0);
     }
   }
@@ -393,15 +393,15 @@ async function fetchOrders() {
   const topProducts = Object.entries(productSales).sort((a, b) => b[1] - a[1]).slice(0, 10);
 
   const lines = [
-    header('Commandes (agrégat)', '`fetch-store-data.js`', [`**Total** : ${total}`]),
-    '## Résumé commandes',
-    `- **Total commandes** : ${total}`,
-    `- **CA total** : ${totalRevenue.toFixed(2)} ${ccy}`,
-    `- **Panier moyen** : ${avgOrder.toFixed(2)} ${ccy}`,
-    `- **Statuts fulfillment** : ${Object.entries(fulfillmentCounts).map(([k, v]) => `${k} (${total ? Math.round(v / total * 100) : 0}%)`).join(', ')}`,
+    header('Orders (aggregate)', '`fetch-store-data.js`', [`**Total**: ${total}`]),
+    '## Order summary',
+    `- **Total orders**: ${total}`,
+    `- **Total revenue**: ${totalRevenue.toFixed(2)} ${ccy}`,
+    `- **Average order**: ${avgOrder.toFixed(2)} ${ccy}`,
+    `- **Fulfillment statuses**: ${Object.entries(fulfillmentCounts).map(([k, v]) => `${k} (${total ? Math.round(v / total * 100) : 0}%)`).join(', ')}`,
     '',
-    '## Top 10 produits vendus',
-    '| Produit | Quantité vendue |',
+    '## Top 10 products sold',
+    '| Product | Quantity sold |',
     '|---|---:|',
     ...topProducts.map(([t, q]) => `| ${escapeMd(t)} | ${q} |`),
     '',
@@ -425,33 +425,33 @@ const PAGES_QUERY = `
 `;
 
 async function fetchPages() {
-  console.log('[5/9] Extraction des pages...');
+  console.log('[5/9] Fetching pages...');
   const all = [];
   let cursor = null, page = 0;
   do {
     page++;
     process.stdout.write(`  page ${page}…`);
     const res = execGql(PAGES_QUERY, { first: 50, after: cursor });
-    if (res._error) { console.log(` erreur GraphQL : ${res._msg || res._error}`); break; }
+    if (res._error) { console.log(` GraphQL error: ${res._msg || res._error}`); break; }
     const edges = res?.pages?.edges || [];
     for (const e of edges) all.push(e.node);
     const pi = res?.pages?.pageInfo || {};
     cursor = pi.hasNextPage ? pi.endCursor : null;
-    console.log(` ${edges.length} → cumul ${all.length}`);
+    console.log(` ${edges.length} → total ${all.length}`);
     if (cursor) await sleep(PAGE_DELAY_MS);
   } while (cursor);
 
-  const lines = [header('Pages', '`fetch-store-data.js`', [`**Total** : ${all.length}`])];
+  const lines = [header('Pages', '`fetch-store-data.js`', [`**Total**: ${all.length}`])];
   for (const p of all) {
     const wc = wordCount(stripHtml(p.body || ''));
     lines.push(`## ${p.title}`);
-    lines.push(`- **ID** : ${p.id}`);
-    lines.push(`- **Handle** : \`${p.handle}\``);
-    lines.push(`- **Mots** : ${wc}`);
-    lines.push(`- **Créée le** : ${p.createdAt || '—'}`);
-    lines.push(`- **Mise à jour** : ${p.updatedAt || '—'}`);
+    lines.push(`- **ID**: ${p.id}`);
+    lines.push(`- **Handle**: \`${p.handle}\``);
+    lines.push(`- **Words**: ${wc}`);
+    lines.push(`- **Created**: ${p.createdAt || '—'}`);
+    lines.push(`- **Updated**: ${p.updatedAt || '—'}`);
     if (p.bodySummary) {
-      lines.push(`- **Résumé** :`);
+      lines.push(`- **Summary**:`);
       lines.push('  > ' + escapeMd(trunc(p.bodySummary, 300)));
     }
     lines.push('');
@@ -463,10 +463,10 @@ async function fetchPages() {
 }
 
 // ============================================================
-// 6. METAFIELDS — synthèse à partir des produits
+// 6. METAFIELDS — synthesis from products
 // ============================================================
 function writeMetafieldsFromProducts(products) {
-  console.log('[6/9] Synthèse des metafields...');
+  console.log('[6/9] Building metafields synthesis...');
   const byNs = {};
   for (const p of products || []) {
     const metas = (p.metafields?.edges || []).map(e => e.node);
@@ -480,13 +480,13 @@ function writeMetafieldsFromProducts(products) {
   }
 
   const lines = [
-    header('Metafields produits (synthèse)', '`fetch-store-data.js`', [`**Total namespaces** : ${Object.keys(byNs).length}`]),
-    '> Les metafields produits sont inclus dans le scope `read_products`.',
+    header('Product metafields (synthesis)', '`fetch-store-data.js`', [`**Total namespaces**: ${Object.keys(byNs).length}`]),
+    '> Product metafields are included in the `read_products` scope.',
     '',
   ];
   for (const ns of Object.keys(byNs).sort()) {
-    lines.push(`## Namespace : \`${ns}\``);
-    lines.push('| Key | Type | Occurrences | Échantillon | Exemples handles |');
+    lines.push(`## Namespace: \`${ns}\``);
+    lines.push('| Key | Type | Occurrences | Sample | Example handles |');
     lines.push('|---|---|---:|---|---|');
     for (const k of Object.keys(byNs[ns]).sort()) {
       const e = byNs[ns][k];
@@ -501,7 +501,7 @@ function writeMetafieldsFromProducts(products) {
 // 7. REDIRECTS
 // ============================================================
 async function fetchRedirects() {
-  console.log('[7/9] Extraction des redirections...');
+  console.log('[7/9] Fetching URL redirects...');
   const QUERY = `
     query FetchRedirects($first: Int!, $after: String) {
       urlRedirects(first: $first, after: $after) {
@@ -516,18 +516,18 @@ async function fetchRedirects() {
     page++;
     process.stdout.write(`  page ${page}…`);
     const res = execGql(QUERY, { first: 250, after: cursor });
-    if (res._error) { console.log(` erreur GraphQL : ${res._msg || res._error}`); break; }
+    if (res._error) { console.log(` GraphQL error: ${res._msg || res._error}`); break; }
     const edges = res?.urlRedirects?.edges || [];
     for (const e of edges) all.push(e.node);
     const pi = res?.urlRedirects?.pageInfo || {};
     cursor = pi.hasNextPage ? pi.endCursor : null;
-    console.log(` ${edges.length} → cumul ${all.length}`);
+    console.log(` ${edges.length} → total ${all.length}`);
     if (cursor) await sleep(PAGE_DELAY_MS);
   } while (cursor);
 
   const lines = [
-    header('Redirections URL', '`fetch-store-data.js`', [`**Total** : ${all.length}`]),
-    '| Path source | Cible |',
+    header('URL redirects', '`fetch-store-data.js`', [`**Total**: ${all.length}`]),
+    '| Source path | Target |',
     '|---|---|',
     ...all.map(r => `| ${escapeMd(r.path)} | ${escapeMd(r.target)} |`),
     '',
@@ -542,17 +542,17 @@ async function fetchRedirects() {
 function writeNavigationStub() {
   console.log('[8/9] Navigation (stub)...');
   const lines = [
-    header('Navigation / menus', '`fetch-store-data.js`', ['**Statut** : non extractible automatiquement']),
-    '## ⚠️ Endpoint indisponible via `shopify store execute`',
+    header('Navigation / menus', '`fetch-store-data.js`', ['**Status**: not automatically extractable']),
+    '## ⚠️ Endpoint unavailable through `shopify store execute`',
     '',
-    '`menus` GraphQL retourne ACCESS_DENIED même avec `read_content`.',
-    'L\'endpoint nécessite une App privée avec la permission `read_online_store_navigation`.',
+    'The `menus` GraphQL query returns ACCESS_DENIED even with `read_content`.',
+    'The endpoint requires a private App with the `read_online_store_navigation` permission.',
     '',
-    '### Menu actuel (à compléter manuellement)',
+    '### Current menu (fill in manually)',
     '',
-    '| Position | Nom du lien | URL/handle | Niveau |',
+    '| Position | Link name | URL/handle | Level |',
     '|---|---|---|---|',
-    '| 1 | _(à compléter)_ | _(à compléter)_ | racine |',
+    '| 1 | _(to fill)_ | _(to fill)_ | root |',
     '',
   ];
   writeFile('navigation.md', lines.join('\n'));
@@ -562,7 +562,7 @@ function writeNavigationStub() {
 // 9. STORE-META
 // ============================================================
 async function fetchStoreMeta(counts) {
-  console.log('[9/9] Snapshot global de la boutique...');
+  console.log('[9/9] Global store snapshot...');
   const QUERY = `
     query Shop {
       shop {
@@ -578,32 +578,32 @@ async function fetchStoreMeta(counts) {
   const res = execGql(QUERY);
   const shop = res?.shop;
   if (!shop) {
-    console.log('  ⚠️  shop introuvable — stub minimal écrit.');
-    writeFile('store-meta.md', header('Snapshot boutique', '`fetch-store-data.js`', ['**Statut** : extraction partielle']));
+    console.log('  ⚠️  shop not found — minimal stub written.');
+    writeFile('store-meta.md', header('Store snapshot', '`fetch-store-data.js`', ['**Status**: partial extraction']));
     return;
   }
 
   const lines = [
-    header('Snapshot boutique', '`fetch-store-data.js`'),
-    '## Informations boutique',
-    `- **Nom** : ${shop.name}`,
-    `- **Domaine principal** : ${shop.primaryDomain?.url || '—'}`,
-    `- **Domaine myshopify** : ${shop.myshopifyDomain}`,
-    `- **Plan** : ${shop.plan?.displayName || '—'}`,
-    `- **Devise** : ${shop.currencyCode}`,
-    `- **Fuseau horaire** : ${shop.ianaTimezone}`,
+    header('Store snapshot', '`fetch-store-data.js`'),
+    '## Store information',
+    `- **Name**: ${shop.name}`,
+    `- **Primary domain**: ${shop.primaryDomain?.url || '—'}`,
+    `- **myshopify domain**: ${shop.myshopifyDomain}`,
+    `- **Plan**: ${shop.plan?.displayName || '—'}`,
+    `- **Currency**: ${shop.currencyCode}`,
+    `- **Timezone**: ${shop.ianaTimezone}`,
     '',
-    '## Volumes extraits',
-    `- **Produits** : ${counts.products ?? '—'}`,
-    `- **Collections** : ${counts.collections ?? '—'}`,
-    `- **Pages** : ${counts.pages ?? '—'}`,
-    `- **Redirections** : ${counts.redirects ?? '—'}`,
-    `- **Clients** : ${counts.customers ?? 'n/a (scope manquant)'}`,
-    `- **Commandes** : ${counts.orders ?? 'n/a (scope manquant)'}`,
+    '## Extracted volumes',
+    `- **Products**: ${counts.products ?? '—'}`,
+    `- **Collections**: ${counts.collections ?? '—'}`,
+    `- **Pages**: ${counts.pages ?? '—'}`,
+    `- **Redirects**: ${counts.redirects ?? '—'}`,
+    `- **Customers**: ${counts.customers ?? 'n/a (missing scope)'}`,
+    `- **Orders**: ${counts.orders ?? 'n/a (missing scope)'}`,
     '',
-    '## Dernière extraction',
-    `- **Timestamp** : ${nowIso()}`,
-    `- **Boutique cible** : \`${STORE}\``,
+    '## Last extraction',
+    `- **Timestamp**: ${nowIso()}`,
+    `- **Target store**: \`${STORE}\``,
     '',
   ];
   writeFile('store-meta.md', lines.join('\n'));
@@ -613,7 +613,7 @@ async function fetchStoreMeta(counts) {
 // MAIN
 // ============================================================
 async function main() {
-  const banner = `Extraction store-data — ${STORE}`;
+  const banner = `store-data extraction — ${STORE}`;
   console.log('\n' + '━'.repeat(banner.length + 4));
   console.log('  ' + banner);
   console.log('━'.repeat(banner.length + 4) + '\n');
@@ -634,19 +634,19 @@ async function main() {
 
   const dt = Math.round((Date.now() - t0) / 1000);
   console.log('\n═══════════════════════════════════════');
-  console.log(`  ✅ Extraction terminée en ${dt}s`);
-  console.log(`     Produits     : ${counts.products}`);
-  console.log(`     Collections  : ${counts.collections}`);
-  console.log(`     Pages        : ${counts.pages}`);
-  console.log(`     Redirections : ${counts.redirects}`);
-  console.log(`     Clients      : ${counts.customers ?? 'n/a (scope)'}`);
-  console.log(`     Commandes    : ${counts.orders ?? 'n/a (scope)'}`);
-  console.log(`  💾 Sortie : ${STORE_DATA}`);
+  console.log(`  ✅ Extraction completed in ${dt}s`);
+  console.log(`     Products    : ${counts.products}`);
+  console.log(`     Collections : ${counts.collections}`);
+  console.log(`     Pages       : ${counts.pages}`);
+  console.log(`     Redirects   : ${counts.redirects}`);
+  console.log(`     Customers   : ${counts.customers ?? 'n/a (scope)'}`);
+  console.log(`     Orders      : ${counts.orders ?? 'n/a (scope)'}`);
+  console.log(`  💾 Output: ${STORE_DATA}`);
   console.log('═══════════════════════════════════════\n');
 }
 
 main().catch(e => {
-  console.error('\n❌  Erreur fatale :', e.message);
+  console.error('\n❌  Fatal error:', e.message);
   if (e.stack) console.error(e.stack);
   process.exit(1);
 });

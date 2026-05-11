@@ -1,29 +1,29 @@
-# Audit — Descriptions inférieures à 150 mots
+# Audit — Descriptions under 150 words
 
-**Script utilisé** : `audit/audit.js`
-**Fichiers de référence lus** : `store-data/products.md`
+**Script used**: `audit/audit.js`
+**Reference files read**: `store-data/products.md`
 
-## Cible
+## Target
 
-- **Scope** : products
-- **Filtre** : status ACTIVE, desc_words < 150
-- **Nb entités concernées** : 0
+- **Scope**: products
+- **Filter**: status ACTIVE, desc_words < 150
+- **Entities affected**: 0
 
 ## Action
 
-- **Type** : audit
-- **Champ modifié** : —
-- **Valeur** : —
+- **Type**: audit
+- **Field**: —
+- **Value**: —
 
-## Validation avant application
+## Validation
 
-- [x] Vérifier que les entités cibles sont bien dans `store-data/products.md`
-- [ ] Afficher les changements prévus avant d'appliquer
-- [ ] Demander confirmation `o/N` avant la mutation
+- [x] Verify target entities are in `store-data/products.md`
+- [ ] Show planned changes (dry-run)
+- [ ] Ask confirmation y/N before mutation
 
-## Critères de succès
+## Success criteria
 
-- Liste des produits dont la description fait moins de 150 mots
-- Préparation pour une tâche `content/update-products.js` qui réécrira les descriptions via Gemini
+- List of products whose description is shorter than 150 words
+- Prepares a `content/update-products.js` task that will rewrite the descriptions through Gemini
 
-## Résultats
+## Results

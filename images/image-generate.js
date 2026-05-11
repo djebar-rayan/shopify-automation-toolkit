@@ -1,29 +1,29 @@
 'use strict';
 
 // ============================================================
-// images/image-generate.js — Génération d'images via Gemini Image
+// images/image-generate.js — Image generation via Gemini Image
 // ------------------------------------------------------------
-// 2 modes d'utilisation :
+// 2 usage modes:
 //
-//   1) Mode "single" — pour un produit, on génère N images
-//      à partir d'un prompt textuel + (optionnel) une image de référence.
-//      Toutes les images générées sont sauvegardées dans generated-images/.
+//   1) "single" — for one product, generate N images from a text
+//      prompt + (optional) one reference image. Output images go to
+//      generated-images/.
 //
-//   2) Mode "multi-variant" — pour un produit avec N variantes,
-//      on génère une image par variante, en utilisant 2 références :
-//        - une image canonique (motif, design, etc.)
-//        - l'image existante de la variante (pour préserver sa forme)
-//      Le prompt instruit Gemini à combiner les deux.
+//   2) "multi-variant" — for a product with N variants, generate one
+//      image per variant using 2 references:
+//        - a canonical image (motif, design, etc.)
+//        - the variant's existing image (to preserve its shape)
+//      The prompt instructs Gemini to combine the two.
 //
-// Aucune mutation Shopify : les images sont laissées en local pour
-// validation visuelle. Utiliser ensuite images/image-upload.js.
+// No Shopify mutation: images are kept locally for visual validation.
+// Then use images/image-upload.js.
 //
-// Usage :
-//   node images/image-generate.js --mode=single --handle=mon-produit \
-//     --prompt="Photo studio fond blanc, 4K, cadrage carré"
+// Usage:
+//   node images/image-generate.js --mode=single --handle=my-product \
+//     --prompt="Studio photo on white background, 4K, square framing"
 //
-//   node images/image-generate.js --mode=multi-variant --handle=mon-produit \
-//     --canonical=0 --prompt="Préserve le motif de l'image 1, applique-le sur la forme de l'image 2."
+//   node images/image-generate.js --mode=multi-variant --handle=my-product \
+//     --canonical=0 --prompt="Preserve the motif of image 1 and apply it to the shape of image 2."
 // ============================================================
 
 const fs = require('fs');
@@ -42,7 +42,7 @@ const GEN_DIR = config.GEN_DIR;
 async function main() {
   const mode = getFlag('mode', 'single');
   const handle = getFlag('handle');
-  if (!handle) { console.error('❌  --handle <product-handle> requis'); process.exit(1); }
+  if (!handle) { console.error('❌  --handle <product-handle> is required'); process.exit(1); }
 
   const prompt = getFlag('prompt') || '';
   const noImprove = hasFlag('no-improve');
@@ -56,11 +56,11 @@ async function main() {
   fs.mkdirSync(GEN_DIR, { recursive: true });
 
   console.log(`\n━━━ image-generate (${mode}) ━━━`);
-  console.log(`  Handle   : ${handle}`);
-  console.log(`  Prompt   : ${prompt ? prompt.slice(0, 100) : '(défini par mode)'}`);
-  console.log(`  Sortie   : ${GEN_DIR}\n`);
+  console.log(`  Handle: ${handle}`);
+  console.log(`  Prompt: ${prompt ? prompt.slice(0, 100) : '(default for this mode)'}`);
+  console.log(`  Output: ${GEN_DIR}\n`);
 
-  // 1. Récupérer le produit + ses médias + variantes
+  // Fetch the product + its media + variants
   const Q = `
     query Get($handle: String!) {
       productByHandle(handle: $handle) {
@@ -82,8 +82,8 @@ async function main() {
   `;
   const r = execGql(Q, { handle });
   const product = r?.productByHandle;
-  if (!product) { console.error(`❌  Produit introuvable : ${handle}`); process.exit(1); }
-  console.log(`  Produit : ${product.title}`);
+  if (!product) { console.error(`❌  Product not found: ${handle}`); process.exit(1); }
+  console.log(`  Product: ${product.title}`);
 
   const images = (product.media?.edges || []).map(e => e.node).filter(m => m.mediaContentType === 'IMAGE');
   const variants = (product.variants?.edges || []).map(e => e.node);
@@ -94,77 +94,77 @@ async function main() {
   if (mode === 'multi-variant') {
     return runMultiVariant(product, images, variants, prompt, canonicalIdx, onlyList, skipList, noImprove, dryRun);
   }
-  console.error(`❌  Mode invalide : ${mode}. Valides : single | multi-variant`);
+  console.error(`❌  Invalid mode: ${mode}. Valid: single | multi-variant`);
   process.exit(1);
 }
 
 // ------------------------------------------------------------
-// Mode "single" — une image (avec ref optionnelle = image[0])
+// "single" mode — one image (with optional ref = image[0])
 // ------------------------------------------------------------
 async function runSingle(product, images, userPrompt, noImprove, dryRun) {
-  const refImage = images[0]; // utilise la première image existante comme référence si dispo
-  let prompt = userPrompt || `Génère une photo produit professionnelle pour ${product.title}, fond blanc neutre, éclairage studio, cadrage carré, qualité 4K.`;
+  const refImage = images[0];
+  let prompt = userPrompt || `Generate a professional product photo for ${product.title}, neutral white background, studio lighting, square framing, 4K quality.`;
   if (!noImprove) {
     try {
-      const meta = `Améliore et étoffe ce prompt de génération d'image produit (style, lumière, cadre) sans en changer le sens. Garde le ton court et précis. Ne rends QUE le prompt amélioré.\n\nPrompt initial : ${prompt}`;
+      const meta = `Improve and expand this product-image generation prompt (style, lighting, framing) without changing its meaning. Keep it short and precise. Return ONLY the improved prompt.\n\nInitial prompt: ${prompt}`;
       prompt = await callGeminiTextWithRetry(meta);
-      console.log(`  Prompt amélioré : ${prompt.slice(0, 120)}…`);
+      console.log(`  Improved prompt: ${prompt.slice(0, 120)}…`);
     } catch (e) {
-      console.log(`  ⚠️  Amélioration prompt échouée : ${e.message.slice(0, 80)} — on garde le prompt initial.`);
+      console.log(`  ⚠️  Prompt improvement failed: ${e.message.slice(0, 80)} — keeping the initial prompt.`);
     }
   }
 
   const refs = [];
   if (refImage?.image?.url) {
-    process.stdout.write(`  Téléchargement de l'image de référence…`);
+    process.stdout.write(`  Downloading reference image…`);
     refs.push(await downloadImageAsBase64(refImage.image.url));
     console.log(' ✓');
   }
 
   if (dryRun) {
-    console.log('\n  (dry-run — aucune génération effectuée)\n');
+    console.log('\n  (dry-run — no generation performed)\n');
     return;
   }
 
-  console.log(`  Génération via Gemini Image…`);
+  console.log(`  Generating via Gemini Image…`);
   const out = await callGeminiImageWithRetry(prompt, refs);
   const validation = validateGeneratedImage(out.base64, out.mimeType);
   if (!validation.valid) {
-    console.log(`  ❌ Image rejetée : ${validation.reason}`);
+    console.log(`  ❌ Image rejected: ${validation.reason}`);
     return;
   }
   const ext = out.mimeType.includes('png') ? 'png' : 'jpg';
   const filename = `${product.handle}_${Date.now()}.${ext}`;
   const filepath = path.join(GEN_DIR, filename);
   fs.writeFileSync(filepath, Buffer.from(out.base64, 'base64'));
-  console.log(`  ✓ Sauvegardée : ${filepath} (${validation.sizeKB} KB, ${validation.width}×${validation.height})`);
-  console.log(`\n  Pour l'uploader vers Shopify :`);
+  console.log(`  ✓ Saved: ${filepath} (${validation.sizeKB} KB, ${validation.width}×${validation.height})`);
+  console.log(`\n  To upload to Shopify:`);
   console.log(`    node images/image-upload.js --handle ${product.handle} --file "${filepath}" --confirm\n`);
 }
 
 // ------------------------------------------------------------
-// Mode "multi-variant" — une image par variante
+// "multi-variant" mode — one image per variant
 // ------------------------------------------------------------
 async function runMultiVariant(product, images, variants, userPrompt, canonicalIdx, onlyList, skipList, noImprove, dryRun) {
   if (variants.length === 0) {
-    console.error('❌  Ce produit n\'a pas de variantes — utiliser --mode=single.');
+    console.error('❌  This product has no variant — use --mode=single.');
     process.exit(1);
   }
   const canonical = images[canonicalIdx];
   if (!canonical?.image?.url) {
-    console.error(`❌  Image canonique introuvable à l'index ${canonicalIdx}.`);
+    console.error(`❌  Canonical image not found at index ${canonicalIdx}.`);
     process.exit(1);
   }
-  console.log(`  ${variants.length} variantes détectées, canonique = image #${canonicalIdx}`);
+  console.log(`  ${variants.length} variants detected, canonical = image #${canonicalIdx}`);
 
-  let basePrompt = userPrompt || 'Préserve le motif/design de l\'image 1 (canonique). Applique-le sur la forme/couleur de l\'image 2 (variante). Photo studio fond blanc, qualité 4K.';
+  let basePrompt = userPrompt || 'Preserve the motif/design of image 1 (canonical). Apply it to the shape/colour of image 2 (variant). Studio photo, white background, uniform lighting, 4K quality.';
   if (!noImprove) {
     try {
-      basePrompt = await callGeminiTextWithRetry(`Améliore ce prompt de génération d'image (style, cadrage, lumière) sans en changer le sens. Rends UNIQUEMENT le prompt amélioré.\n\n${basePrompt}`);
+      basePrompt = await callGeminiTextWithRetry(`Improve this image generation prompt (style, framing, lighting) without changing its meaning. Return ONLY the improved prompt.\n\n${basePrompt}`);
     } catch (_) {}
   }
 
-  process.stdout.write('  Téléchargement de l\'image canonique…');
+  process.stdout.write('  Downloading canonical image…');
   const canonicalImg = await downloadImageAsBase64(canonical.image.url);
   console.log(' ✓');
 
@@ -173,13 +173,13 @@ async function runMultiVariant(product, images, variants, userPrompt, canonicalI
     if (skipList && skipList.some(s => v.title.toLowerCase().includes(s.toLowerCase()))) return false;
     return true;
   });
-  console.log(`  ${filtered.length} variantes à traiter.\n`);
+  console.log(`  ${filtered.length} variants to process.\n`);
 
   let ok = 0, errors = 0;
   for (let i = 0; i < filtered.length; i++) {
     const v = filtered[i];
     process.stdout.write(`  [${i + 1}/${filtered.length}] ${v.title}…`);
-    if (!v.image?.url) { console.log(' ⚠️  pas d\'image variante, skip'); continue; }
+    if (!v.image?.url) { console.log(' ⚠️  no variant image, skipping'); continue; }
 
     const safeTitle = v.title.replace(/[^a-z0-9]+/gi, '_').toLowerCase();
     const out_filename = `${product.handle}_${safeTitle}.jpg`;
@@ -205,8 +205,8 @@ async function runMultiVariant(product, images, variants, userPrompt, canonicalI
       errors++;
     }
   }
-  console.log(`\n  Résultat : ${ok} générées, ${errors} erreur(s).`);
-  console.log('  ⚠️  Validation visuelle recommandée AVANT upload.\n');
+  console.log(`\n  Result: ${ok} generated, ${errors} error(s).`);
+  console.log('  ⚠️  Manual visual validation recommended BEFORE upload.\n');
 }
 
 main().catch(e => { console.error('FATAL:', e.message); if (e.stack) console.error(e.stack); process.exit(1); });

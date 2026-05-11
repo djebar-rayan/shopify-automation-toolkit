@@ -1,18 +1,18 @@
 'use strict';
 
 // ============================================================
-// images/image-alt.js — Mise à jour des alt texts manquants
+// images/image-alt.js — Update missing alt texts
 // ------------------------------------------------------------
-// Pour chaque produit du filtre :
-//   1. Récupère ses médias (id, alt actuel) via GraphQL.
-//   2. Pour les alts manquants, génère un alt avec :
-//      - mode=formula (défaut)  → lib/builders/seo-meta::generateAltText
-//      - mode=vision            → Gemini Vision analyse l'image
-//   3. Pousse productUpdateMedia (mutation).
+// For each product in the filter:
+//   1. Fetch its media (id, current alt) via GraphQL.
+//   2. For missing alts, generate one of:
+//      - mode=formula (default) → lib/builders/seo-meta::generateAltText
+//      - mode=vision            → Gemini Vision analyzes the image
+//   3. Push productUpdateMedia (mutation).
 //
-// Usage :
+// Usage:
 //   node images/image-alt.js                                 # dry-run, formulas
-//   node images/image-alt.js --confirm                       # applique
+//   node images/image-alt.js --confirm                       # apply
 //   node images/image-alt.js --mode=vision --confirm         # Gemini Vision
 //   node images/image-alt.js --filter "status ACTIVE, no_alt"
 // ============================================================
@@ -32,13 +32,13 @@ async function main() {
   const filter = getFlag('filter', 'status ACTIVE, no_alt');
 
   console.log(`\n━━━ image-alt ━━━`);
-  console.log(`  Mode   : ${apply ? 'APPLIQUER' : 'dry-run'}  |  Source : ${mode}`);
-  console.log(`  Filtre : ${filter}\n`);
+  console.log(`  Mode  : ${apply ? 'APPLY' : 'dry-run'}  |  Source: ${mode}`);
+  console.log(`  Filter: ${filter}\n`);
 
   const blocks = parseStoreDataBlocks('products.md');
   const matched = applyFilter(blocks, filter);
-  if (!matched.length) { console.log('  Aucune cible.'); return; }
-  console.log(`  ${matched.length} produit(s) à inspecter.`);
+  if (!matched.length) { console.log('  No target.'); return; }
+  console.log(`  ${matched.length} product(s) to inspect.`);
 
   const Q = `
     query GetMedia($id: ID!) {
@@ -68,19 +68,18 @@ async function main() {
       idx++;
     }
   }
-  console.log(`  ${plan.length} alt text(s) à générer.\n`);
+  console.log(`  ${plan.length} alt text(s) to generate.\n`);
 
-  // Génère
   for (const item of plan) {
     if (mode === 'vision' && item.imageUrl) {
       try {
         const img = await downloadImageAsBase64(item.imageUrl);
-        const prompt = `Décris ce produit en une phrase courte (max 100 caractères) pour un attribut alt SEO. Pas de Markdown, pas de guillemets autour de la phrase.`;
+        const prompt = `Describe this product in one short sentence (max 100 characters) suitable as an SEO alt attribute. No Markdown, no surrounding quotes.`;
         const txt = await callGeminiVisionWithRetry(prompt, img.base64, img.mimeType);
         item.newAlt = (txt || '').slice(0, 512);
         await sleep(config.DELAY_GEMINI);
       } catch (e) {
-        console.log(`  ⚠️  ${item.handle} #${item.idx} Vision a échoué (${e.message.slice(0, 60)}), fallback formula.`);
+        console.log(`  ⚠️  ${item.handle} #${item.idx} Vision failed (${e.message.slice(0, 60)}), falling back to formula.`);
         item.newAlt = generateAltText(item.product, item.idx);
       }
     } else {
@@ -88,18 +87,18 @@ async function main() {
     }
   }
 
-  console.log('  Préview (5 premiers) :');
+  console.log('  Preview (first 5):');
   for (const item of plan.slice(0, 5)) {
     console.log(`    ${item.handle.padEnd(40)} #${item.idx} → ${item.newAlt}`);
   }
 
   if (!apply) {
-    console.log('\n  (dry-run terminé — relancer avec --confirm pour appliquer)\n');
+    console.log('\n  (dry-run completed — rerun with --confirm to apply)\n');
     return;
   }
 
-  const ok = await confirm(`\n  Appliquer ${plan.length} alt text(s) ?`, true);
-  if (!ok) { console.log('  Annulé.'); return; }
+  const ok = await confirm(`\n  Apply ${plan.length} alt text(s)?`, true);
+  if (!ok) { console.log('  Cancelled.'); return; }
 
   const M = `
     mutation UpdMedia($productId: ID!, $media: [UpdateMediaInput!]!) {
@@ -126,7 +125,7 @@ async function main() {
     }
     await sleep(config.DELAY_SHOPIFY);
   }
-  console.log(`\n  Résultat : ${okCount} ok, ${errors} erreur(s).\n`);
+  console.log(`\n  Result: ${okCount} ok, ${errors} error(s).\n`);
 }
 
 main().catch(e => { console.error('FATAL:', e.message); process.exit(1); });

@@ -1,39 +1,39 @@
-# Normalisation des handles non-ASCII
+# Normalize non-ASCII handles
 
-> Cette recette utilise la commande dédiée :
+> This recipe uses the dedicated command:
 >
 > ```
-> node content/handle-normalize.js              # dry-run, diacritiques latins
-> node content/handle-normalize.js --confirm    # applique
+> node content/handle-normalize.js              # dry-run, Latin diacritics
+> node content/handle-normalize.js --confirm    # apply
 > ```
 >
-> Les diacritiques latins (é, ç, à, ñ, ü…) sont gérés nativement par NFKD.
-> Pour les alphabets non-latins (cyrillique, arabe, devanagari, tifinagh…)
-> fournir un preset JSON via `--map=lib/builders/translit-presets/<name>.json`
-> (ou créer le sien — cf. `lib/builders/translit-presets/README.md`).
+> Latin diacritics (é, ç, à, ñ, ü…) are handled natively by NFKD.
+> For non-Latin alphabets (Cyrillic, Arabic, Devanagari, Tifinagh…)
+> pass a JSON preset via `--map=lib/builders/translit-presets/<name>.json`
+> (or write your own — see `lib/builders/translit-presets/README.md`).
 
-## Cible
+## Target
 
-- **Scope** : products
-- **Filtre** : tous les produits
-- **Nb entités concernées** : (calculé à l'exécution — uniquement ceux dont le handle contient des caractères non-ASCII)
+- **Scope**: products
+- **Filter**: all products
+- **Entities affected**: (computed at runtime — only those whose handle contains non-ASCII characters)
 
 ## Action
 
-- **Type** : update
-- **Champ modifié** : handle
-- **Valeur** : produit par `lib/builders/handle.js::normalizeHandle()`
+- **Type**: update
+- **Field**: handle
+- **Value**: produced by `lib/builders/handle.js::normalizeHandle()`
 
-## Validation avant application
+## Validation
 
-- [x] Vérifier que les entités cibles sont bien dans `store-data/products.md`
-- [x] Afficher les changements prévus avant d'appliquer
-- [x] Demander confirmation `o/N` avant la mutation
+- [x] Verify target entities are in `store-data/products.md`
+- [x] Show planned changes (dry-run)
+- [x] Ask confirmation y/N before mutation
 
-## Critères de succès
+## Success criteria
 
-- 100 % des handles non-ASCII sont remplacés par leur équivalent ASCII
-- Shopify crée automatiquement les redirections 301 depuis les anciens handles
-- `store-data/redirects.md` doit être re-fetché après application
+- 100% of non-ASCII handles are replaced with their ASCII equivalent
+- Shopify automatically creates 301 redirects from the old handles
+- `store-data/redirects.md` should be re-fetched after the run
 
-## Résultats
+## Results

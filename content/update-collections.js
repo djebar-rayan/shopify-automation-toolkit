@@ -1,10 +1,10 @@
 'use strict';
 
 // ============================================================
-// content/update-collections.js — Mise à jour des collections
+// content/update-collections.js — Generic collection update
 // ------------------------------------------------------------
-// Champs supportés : descriptionHtml, seo.title, seo.description, handle.
-// Pilotage identique à content/update-products.js.
+// Supported fields: descriptionHtml, seo.title, seo.description, handle.
+// Driving identical to content/update-products.js.
 // ============================================================
 
 const path = require('path');
@@ -27,29 +27,31 @@ const FIELD_MAP = {
   'handle':           'handle',
 };
 
+const GEMINI_PREFIX = /^generate via gemini with this prompt\s*:/i;
+
 async function main() {
   const taskPath = getFlag('task');
-  if (!taskPath) { console.error('❌  --task <fichier.md> requis'); process.exit(1); }
+  if (!taskPath) { console.error('❌  --task <file.md> is required'); process.exit(1); }
   const abs = path.isAbsolute(taskPath) ? taskPath : path.join(process.cwd(), taskPath);
   const task = parseTaskFile(abs);
 
-  if (task.cible.scope !== 'collections') { console.error(`❌  scope=collections requis, reçu : ${task.cible.scope}`); process.exit(1); }
-  if (task.action.type !== 'update') { console.error(`❌  type=update requis`); process.exit(1); }
+  if (task.target.scope !== 'collections') { console.error(`❌  scope=collections required, got: ${task.target.scope}`); process.exit(1); }
+  if (task.action.type !== 'update') { console.error(`❌  type=update required`); process.exit(1); }
 
   const fieldKey = FIELD_MAP[(task.action.field || '').toLowerCase()];
-  if (!fieldKey) { console.error(`❌  Champ non supporté : ${task.action.field}. Valides : ${Object.keys(FIELD_MAP).join(', ')}`); process.exit(1); }
+  if (!fieldKey) { console.error(`❌  Unsupported field: ${task.action.field}. Valid: ${Object.keys(FIELD_MAP).join(', ')}`); process.exit(1); }
 
   console.log(`\n━━━ update-collections ━━━`);
-  console.log(`  Tâche  : ${task.name}`);
-  console.log(`  Filtre : ${task.cible.filter}`);
-  console.log(`  Champ  : ${task.action.field}\n`);
+  console.log(`  Task   : ${task.name}`);
+  console.log(`  Filter : ${task.target.filter}`);
+  console.log(`  Field  : ${task.action.field}\n`);
 
   const blocks = parseStoreDataBlocks('collections.md');
-  const matched = applyFilter(blocks, task.cible.filter);
-  if (!matched.length) { console.log('  Aucune cible.'); return; }
-  console.log(`  ${matched.length}/${blocks.length} collections ciblées.`);
+  const matched = applyFilter(blocks, task.target.filter);
+  if (!matched.length) { console.log('  No target.'); return; }
+  console.log(`  ${matched.length}/${blocks.length} collections targeted.`);
 
-  const useGemini = /^générer via gemini avec ce prompt\s*:/i.test(task.action.value);
+  const useGemini = GEMINI_PREFIX.test(task.action.value);
   const geminiPrompt = useGemini ? task.action.value.replace(/^[^:]*:\s*/i, '') : null;
 
   const plan = [];
@@ -62,21 +64,21 @@ async function main() {
         const fullPrompt = [
           geminiPrompt,
           '',
-          `Collection : ${b.title}`,
-          `Handle : ${b.handle}`,
+          `Collection: ${b.title}`,
+          `Handle: ${b.handle}`,
           '',
-          'Rends UNIQUEMENT le contenu HTML, sans préambule, sans triples backticks.',
+          'Return ONLY the HTML content, without preamble, without triple backticks.',
         ].join('\n');
         newValue = await callGeminiTextWithRetry(fullPrompt);
         console.log(` ✓ Gemini ${newValue.length}c`);
         await sleep(config.DELAY_GEMINI);
-      } catch (e) { console.log(` ❌ Gemini : ${e.message.slice(0, 80)}`); continue; }
-    } else { console.log(' (valeur littérale)'); }
+      } catch (e) { console.log(` ❌ Gemini: ${e.message.slice(0, 80)}`); continue; }
+    } else { console.log(' (literal value)'); }
     plan.push({ block: b, newValue });
   }
 
   if (task.validation.showDryRun) {
-    console.log('\n  Préview (2 premières) :');
+    console.log('\n  Preview (first 2):');
     for (const item of plan.slice(0, 2)) {
       console.log('  ──────────────────────────────────────');
       console.log(`  ${item.block.handle} → ${item.newValue.slice(0, 200)}${item.newValue.length > 200 ? '…' : ''}`);
@@ -84,8 +86,8 @@ async function main() {
   }
 
   if (task.validation.askConfirm) {
-    const ok = await confirm(`\n  Appliquer sur ${plan.length} collection(s) ?`, true);
-    if (!ok) { console.log('  Annulé.'); return; }
+    const ok = await confirm(`\n  Apply to ${plan.length} collection(s)?`, true);
+    if (!ok) { console.log('  Cancelled.'); return; }
   }
 
   const MUTATION = `
@@ -112,14 +114,14 @@ async function main() {
     await sleep(config.DELAY_SHOPIFY);
   }
 
-  console.log(`\n  Résultat : ${ok} ok, ${errors} erreur(s).`);
+  console.log(`\n  Result: ${ok} ok, ${errors} error(s).`);
   appendTaskResult(task.path, [
-    `Entités ciblées : ${plan.length}`,
-    `Entités modifiées : ${ok}`,
-    `Erreurs : ${errors}`,
-    `Champ modifié : ${task.action.field}`,
+    `Targeted entities: ${plan.length}`,
+    `Modified entities: ${ok}`,
+    `Errors: ${errors}`,
+    `Field modified: ${task.action.field}`,
   ]);
-  console.log('\n━━━ Fin update-collections ━━━\n');
+  console.log('\n━━━ End update-collections ━━━\n');
 }
 
 main().catch(e => { console.error('FATAL:', e.message); process.exit(1); });

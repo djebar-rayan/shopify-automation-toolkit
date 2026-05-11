@@ -1,124 +1,125 @@
 ---
 name: shopify-competitor-spy
-description: Analyse la concurrence e-commerce d'une boutique Shopify via WebSearch pour comparer prix, mots-clés, positionnement SEO et stratégie produit. Use when the user wants to analyze competitors, benchmark pricing, find SEO keywords, or understand market positioning in their Shopify niche.
+description: Analyzes the competitive landscape of a Shopify store via WebSearch to compare prices, keywords, SEO positioning and product strategy. Use when the user wants to analyze competitors, benchmark pricing, find SEO keywords, or understand market positioning in their Shopify niche.
 ---
 
 # Shopify Competitor Spy
 
-Analyse concurrentielle d'une niche e-commerce via recherche web structurée.
+Structured competitive analysis of an e-commerce niche via web search.
 
-La niche, la zone géographique et les concurrents pertinents sont **paramètres**
-(lus dans `.env` via `SHOP_BRAND_VOCABULARY` ou demandés à l'utilisateur).
+The niche, geographic zone and relevant competitors are **parameters**
+(read from `.env` via `SHOP_BRAND_VOCABULARY` or asked from the user).
 
 ## Instructions
 
-### Étape 1 — Définir le périmètre
+### Step 1 — Define the scope
 
-Lire `SHOP_BRAND_NAME` et `SHOP_BRAND_VOCABULARY` dans `.env` (ou demander à l'utilisateur) :
+Read `SHOP_BRAND_NAME` and `SHOP_BRAND_VOCABULARY` from `.env` (or ask
+the user):
 
-- **Niche principale** : déduite du vocabulaire (ex: « bijoux artisanaux », « cosmétiques bio », …)
-- **Zone géographique** : France / Europe / global
-- **Gamme de prix** : à déterminer via recherche
-- **Type de comparaison** : prix / SEO / positionnement / offre produit
+- **Main niche**: derived from the vocabulary (e.g. "handcrafted jewelry", "organic cosmetics", …)
+- **Geographic zone**: France / Europe / global
+- **Price range**: to be determined via search
+- **Comparison type**: prices / SEO / positioning / product offering
 
-### Étape 2 — Recherche concurrents directs
+### Step 2 — Direct competitor search
 
-Utiliser WebSearch avec des queries paramétrées :
+Use WebSearch with parameterized queries:
 
 ```
-"<niche>" boutique en ligne site:fr
+"<niche>" online store site:fr
 "<niche>" jewelry france
-"<keyword 1>" "<keyword 2>" achat boutique
-<niche> <zone géographique> livraison
-"<BRAND_NAME>" concurrents alternatives
+"<keyword 1>" "<keyword 2>" buy store
+<niche> <region> shipping
+"<BRAND_NAME>" competitors alternatives
 ```
 
-Pour chaque résultat pertinent, noter :
+For each relevant result, capture:
 
-- Nom de la boutique / marque
+- Store / brand name
 - URL
-- Type de produits proposés
-- Fourchette de prix visible
-- Présence d'un blog / contenu SEO
+- Product types
+- Visible price range
+- Blog / SEO content presence
 
-### Étape 3 — Analyse SEO
+### Step 3 — SEO analysis
 
-Pour les 5 meilleurs concurrents :
+For the top 5 competitors:
 
 ```
-site:<domaine-concurrent> <niche>
-"<nom-concurrent>" avis clients
-"<nom-concurrent>" mots-clés positionnement
+site:<competitor-domain> <niche>
+"<competitor-name>" customer reviews
+"<competitor-name>" keywords positioning
 ```
 
-Identifier :
+Identify:
 
-- Mots-clés positionnés (titres pages, meta descriptions visibles dans SERPs)
-- Volume de contenu (blog, guides, storytelling)
-- Présence réseaux sociaux (Instagram, Pinterest, TikTok)
-- Avis clients (Trustpilot, Google, Trustmary)
+- Keywords positioned (page titles, meta descriptions visible in SERPs)
+- Content volume (blog, guides, storytelling)
+- Social-media presence (Instagram, Pinterest, TikTok)
+- Customer reviews (Trustpilot, Google, Trustmary)
 
-### Étape 4 — Benchmark des prix
+### Step 4 — Price benchmark
 
-Rechercher les prix pour les catégories comparables :
+Search prices for comparable categories:
 
-| Catégorie | Query WebSearch |
+| Category | WebSearch query |
 |---|---|
-| Catégorie A | "<keyword A>" prix site:fr |
-| Catégorie B | "<keyword B>" boutique |
+| Category A | "<keyword A>" price site:fr |
+| Category B | "<keyword B>" store |
 | … | … |
 
-Construire un tableau :
+Build a comparison table:
 
-| Concurrent | Produit équivalent | Prix | Notes |
+| Competitor | Equivalent product | Price | Notes |
 |---|---|---|---|
-| <BRAND_NAME> | … | X € | référence |
-| Concurrent 1 | … | X € | … |
+| <BRAND_NAME> | … | $ X | reference |
+| Competitor 1 | … | $ X | … |
 
-### Étape 5 — Mots-clés manquants
+### Step 5 — Missing keywords
 
-Rechercher les mots-clés à fort potentiel non couverts :
+Search for high-potential keywords not yet covered:
 
 ```
-"<niche>" tendances 2026
-"<niche>" cadeau
-"<niche>" guide d'achat
+"<niche>" trends 2026
+"<niche>" gift
+"<niche>" buying guide
 ```
 
-Identifier les **gaps de contenu** : sujets souvent recherchés mais mal couverts.
+Identify the **content gaps**: topics often searched but poorly covered.
 
-### Étape 6 — Rapport
+### Step 6 — Report
 
-Générer `competitor-analysis.md` (à la racine du repo) :
+Generate `competitor-analysis.md` at the repo root:
 
 ```markdown
-# Analyse concurrentielle — <BRAND_NAME> vs marché
+# Competitive analysis — <BRAND_NAME> vs market
 
-**Date** : YYYY-MM-DD
+**Date**: YYYY-MM-DD
 
-## Résumé exécutif
-{3-5 points clés}
+## Executive summary
+{3–5 key points}
 
-## Carte du marché
-{tableau concurrents}
+## Market map
+{competitor table}
 
-## Benchmark prix
-{tableau prix par catégorie}
+## Price benchmark
+{price table per category}
 
-## Mots-clés opportunités
-{liste des gaps à exploiter}
+## Keyword opportunities
+{list of gaps to exploit}
 
-## Recommandations stratégiques
-### Court terme (1 mois)
-### Moyen terme (3 mois)
-### Long terme (6+ mois)
+## Strategic recommendations
+### Short term (1 month)
+### Medium term (3 months)
+### Long term (6+ months)
 ```
 
-### Étape 7 — Opportunités actionnables
+### Step 7 — Actionable opportunities
 
-Traduire l'analyse en actions concrètes :
+Translate the analysis into concrete actions:
 
-- Mots-clés à ajouter dans les meta titles manquants → tâche `seo/seo-update.js`
-- Catégories de produits sous-représentées → ajout au catalogue
-- Angles de contenu pour blog → tâche `content/update-pages.js`
-- Prix à ajuster si hors marché
+- Keywords to add to missing meta titles → `seo/seo-update.js` task
+- Under-represented product categories → catalog expansion
+- Blog angles → `content/update-pages.js` task
+- Prices to adjust if off-market

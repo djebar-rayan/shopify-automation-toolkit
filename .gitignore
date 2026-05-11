@@ -3,21 +3,21 @@
 .env.local
 .env.*.local
 
-# Données extraites de la boutique (peuplent localement, ne pas versionner)
+# Extracted store data (populated locally, do not version)
 store-data/*.md
 
-# Images générées localement (validation avant upload)
+# Locally generated images (validate before upload)
 generated-images/*.jpg
 generated-images/*.jpeg
 generated-images/*.png
 generated-images/*.webp
 
-# Rapports auto-générés (volatils, écrasés à chaque run)
+# Auto-generated reports (volatile, overwritten on each run)
 audit-report.md
 visual-audit-report.md
 *-report.md
 
-# Données utilisateur des intégrations (CSV, exports privés, fichiers personnels)
+# User data from integrations (CSV, private exports, personal files)
 integrations/klaviyo/templates/
 integrations/klaviyo/*.csv
 integrations/shopify-email/templates-adapted/
@@ -28,10 +28,10 @@ integrations/klaviyo/metrics.md
 integrations/klaviyo/profiles-summary.md
 integrations/klaviyo/klaviyo-summary.md
 
-# Fichiers de tâche utilisateur (les exemples sont versionnés ; les vraies tâches non)
+# User task files (examples are versioned; real tasks are not)
 tasks/task-*.md
 
-# Tampons GraphQL
+# GraphQL scratch buffers
 .audit-tmp/
 
 # Claude Code local

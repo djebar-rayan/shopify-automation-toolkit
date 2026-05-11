@@ -1,16 +1,15 @@
 'use strict';
 
 // ============================================================
-// audit/audit.js — Audit générique read-only piloté par tâche
+// audit/audit.js — Generic read-only audit driven by a task file
 // ------------------------------------------------------------
-// Lit store-data/<scope>.md, applique le filtre déclaré dans
-// le fichier de tâche, affiche les entités correspondantes
-// avec leurs flags (SEO manquants, peu d'images, …) et
-// append un bloc « ## Résultats » à la tâche.
+// Reads store-data/<scope>.md, applies the filter declared in the
+// task file, prints matching entities with their flags (missing
+// SEO, few images, …) and appends a `## Results` block to the task.
 //
-// Aucune mutation Shopify. Aucun appel Gemini.
+// No Shopify mutation. No Gemini call.
 //
-// Usage :
+// Usage:
 //   node audit/audit.js --task tasks/audit-images.md
 //   node audit/audit.js --scope products --filter "images < 3"
 // ============================================================
@@ -35,34 +34,34 @@ async function main() {
   if (taskPath) {
     const abs = path.isAbsolute(taskPath) ? taskPath : path.join(process.cwd(), taskPath);
     task = parseTaskFile(abs);
-    scope = task.cible.scope;
-    filter = task.cible.filter;
+    scope = task.target.scope;
+    filter = task.target.filter;
     taskName = task.name;
   } else {
     scope = getFlag('scope', 'products');
-    filter = getFlag('filter', 'tous');
-    taskName = `Audit ad-hoc — ${scope} — ${filter}`;
+    filter = getFlag('filter', 'all');
+    taskName = `Ad-hoc audit — ${scope} — ${filter}`;
   }
 
   const file = SCOPE_TO_FILE[scope];
   if (!file) {
-    console.error(`❌  Scope inconnu : ${scope}. Valides : ${Object.keys(SCOPE_TO_FILE).join(', ')}`);
+    console.error(`❌  Unknown scope: ${scope}. Valid: ${Object.keys(SCOPE_TO_FILE).join(', ')}`);
     process.exit(1);
   }
 
-  console.log(`\n━━━ Audit générique ━━━`);
-  console.log(`  Tâche  : ${taskName}`);
+  console.log(`\n━━━ Generic audit ━━━`);
+  console.log(`  Task   : ${taskName}`);
   console.log(`  Scope  : ${scope}`);
-  console.log(`  Filtre : ${filter}\n`);
+  console.log(`  Filter : ${filter}\n`);
 
   const blocks = parseStoreDataBlocks(file);
-  console.log(`  ${blocks.length} entités lues depuis store-data/${file}`);
+  console.log(`  ${blocks.length} entities read from store-data/${file}`);
 
   const matched = applyFilter(blocks, filter);
-  console.log(`  ${matched.length} entité(s) correspondent au filtre\n`);
+  console.log(`  ${matched.length} entity(ies) match the filter\n`);
 
   if (matched.length) {
-    console.log('  Liste :');
+    console.log('  List:');
     for (const b of matched.slice(0, 50)) {
       const flags = [];
       if (b.seoTitleMissing) flags.push('seo_title_missing');
@@ -72,21 +71,21 @@ async function main() {
       if (b.noAlt)           flags.push('no_alt');
       console.log(`    • ${(b.handle || b.title || '').padEnd(50)} ${flags.join(' ') || 'OK'}`);
     }
-    if (matched.length > 50) console.log(`    … (+${matched.length - 50} entités)`);
+    if (matched.length > 50) console.log(`    … (+${matched.length - 50} entities)`);
   }
 
   if (task) {
     appendTaskResult(task.path, [
-      `Mode : audit (lecture seule)`,
-      `Scope : ${scope}`,
-      `Filtre : ${filter}`,
-      `Entités correspondantes : ${matched.length} / ${blocks.length}`,
-      `Aucune mutation Shopify exécutée.`,
+      `Mode: audit (read-only)`,
+      `Scope: ${scope}`,
+      `Filter: ${filter}`,
+      `Matching entities: ${matched.length} / ${blocks.length}`,
+      `No Shopify mutation executed.`,
     ]);
-    console.log(`\n  ✓ Résultats appendés à ${path.basename(task.path)}`);
+    console.log(`\n  ✓ Results appended to ${path.basename(task.path)}`);
   }
 
-  console.log('\n━━━ Fin de l\'audit ━━━\n');
+  console.log('\n━━━ End of audit ━━━\n');
 }
 
 main().catch(e => { console.error('FATAL:', e.message); process.exit(1); });

@@ -1,61 +1,61 @@
-# Authentification Shopify
+# Shopify authentication
 
-Le toolkit utilise **Shopify CLI** pour ses requêtes Admin GraphQL. Tous les appels
-passent par `shopify store execute` (cf. `lib/shopify-graphql.js`).
+The toolkit uses **Shopify CLI** for its Admin GraphQL requests. All
+calls flow through `shopify store execute` (see `lib/shopify-graphql.js`).
 
-## Scopes recommandés
+## Recommended scopes
 
 ```bash
 shopify store auth --store <store>.myshopify.com \
   --scopes read_products,write_products,read_content,write_content,read_themes,write_files
 ```
 
-| Scope | Pour quoi |
+| Scope | What for |
 |---|---|
-| `read_products`, `write_products` | tout le toolkit produits + images |
-| `read_content`, `write_content` | pages CMS, collections (descriptions) |
-| `read_themes` | inspection du thème actif (`audit/full-audit.js`) |
-| `write_files` | staged uploads d'images |
+| `read_products`, `write_products` | the whole products + images toolkit |
+| `read_content`, `write_content` | CMS pages, collection descriptions |
+| `read_themes` | inspect the active theme (`audit/full-audit.js`) |
+| `write_files` | staged image uploads |
 
-### Scopes optionnels
+### Optional scopes
 
-| Scope | Pour quoi |
+| Scope | What for |
 |---|---|
-| `read_customers` | agrégats anonymisés dans `store-data/customers.md` |
-| `read_orders` | agrégats commandes dans `store-data/orders.md` |
+| `read_customers` | anonymized aggregates in `store-data/customers.md` |
+| `read_orders` | order aggregates in `store-data/orders.md` |
 
-> ⚠️ **`read_metafields` / `write_metafields` n'existent PAS.** Les metafields
-> produits sont inclus dans `read_products` / `write_products`. Ajouter
-> `read_metafields` provoque une OAuth error.
+> ⚠️ **`read_metafields` / `write_metafields` do NOT exist.** Product
+> metafields are bundled with `read_products` / `write_products`. Adding
+> `read_metafields` triggers an OAuth error.
 
-## Dépannage
+## Troubleshooting
 
 ### "port 13387 already in use"
 
-Le serveur OAuth local du CLI utilise ce port. S'il reste un processus
-zombie d'un précédent `auth` :
+The CLI's local OAuth server uses this port. If a zombie process is
+holding it from a previous `auth`:
 
-**Windows / PowerShell** :
+**Windows / PowerShell**:
 ```powershell
 netstat -ano | findstr ':13387'
 Stop-Process -Id <PID> -Force
 ```
 
-**macOS / Linux** :
+**macOS / Linux**:
 ```bash
 lsof -ti:13387 | xargs kill -9
 ```
 
-### "ACCESS_DENIED" sur certaines queries
+### "ACCESS_DENIED" on some queries
 
-Le scope nécessaire n'est pas accordé. Relancer `shopify store auth` avec le
-scope manquant. Pour les **menus** (navigation), aucun scope `store execute`
-ne fonctionne — l'endpoint nécessite une App privée avec
+The required scope isn't granted. Re-run `shopify store auth` with the
+missing scope. For **menus** (navigation), no scope works through
+`store execute` — the endpoint requires a private App with
 `read_online_store_navigation`.
 
-### Token expiré
+### Token expired
 
-Le CLI re-prompte automatiquement à la prochaine commande. Si non :
+The CLI re-prompts you on the next command. If not:
 
 ```bash
 shopify auth logout
@@ -64,17 +64,18 @@ shopify store auth --store <store> --scopes ...
 
 ### "Invalid store URL"
 
-Le format attendu est `<nom>.myshopify.com` (sans `https://`, sans slash final).
+The expected format is `<name>.myshopify.com` (no `https://`, no
+trailing slash).
 
-## Vérifier l'auth actuelle
+## Check the current auth
 
 ```bash
 shopify store info
 ```
 
-Affiche le store connecté + les scopes accordés.
+Prints the connected store + granted scopes.
 
-## Tester une query rapidement
+## Test a quick query
 
 ```bash
 echo "query { shop { name } }" > /tmp/q.graphql
@@ -83,4 +84,4 @@ shopify store execute --store <store>.myshopify.com \
 cat /tmp/r.json
 ```
 
-Doit retourner `{"shop":{"name":"…"}}` (pas d'enveloppe `.data`).
+Must return `{"shop":{"name":"…"}}` (no `.data` envelope).

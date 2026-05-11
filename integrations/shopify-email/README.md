@@ -1,30 +1,30 @@
-# Shopify Email — Migration générique de templates Klaviyo
+# Shopify Email — generic Klaviyo template migration
 
-Ce dossier convertit des **templates HTML Klaviyo** (export brut)
-en HTML compatible avec l'éditeur **Shopify Email**.
+This folder converts **Klaviyo HTML templates** (raw export) into HTML
+compatible with the **Shopify Email** editor.
 
-## Usage typique
+## Typical usage
 
 ```bash
-# 1. Exporter Klaviyo (read-only)
+# 1. Export Klaviyo (read-only)
 node integrations/klaviyo/klaviyo-export.js
 
-# 2. Adapter les templates
+# 2. Adapt the templates
 node integrations/shopify-email/adapt-templates.js
 ```
 
-Sortie : `integrations/shopify-email/templates-adapted/<fichier>.html`
+Output: `integrations/shopify-email/templates-adapted/<file>.html`
 + `integrations/shopify-email/migration-report.md`.
 
 ## Options
 
-| Flag | Effet |
+| Flag | Effect |
 |---|---|
-| `--src=<dir>` | Dossier source (défaut : `../klaviyo/templates/`) |
-| `--out=<dir>` | Dossier de sortie (défaut : `./templates-adapted/`) |
-| `--mapping=<file.json>` | Substitutions de variables supplémentaires |
+| `--src=<dir>` | Source folder (default: `../klaviyo/templates/`) |
+| `--out=<dir>` | Output folder (default: `./templates-adapted/`) |
+| `--mapping=<file.json>` | Extra variable substitutions |
 
-## Format `--mapping`
+## `--mapping` format
 
 ```json
 [
@@ -33,39 +33,39 @@ Sortie : `integrations/shopify-email/templates-adapted/<fichier>.html`
 ]
 ```
 
-## Transformations appliquées (toutes locales, aucun appel réseau)
+## Applied transformations (all local, no network call)
 
-1. Retrait du header de commentaire de l'export Klaviyo.
-2. Retrait des `<script>`.
-3. Retrait des pixels et `@import` `klaviyo.com`.
-4. Neutralisation des `href` de tracking (devient `href="#"`).
-5. Retrait des `<klaviyo:*>`.
-6. Retrait des conditionnels Outlook MSO.
-7. Inlining des règles CSS simples (`.classe`, `#id`, `tag`).
-8. Substitution des variables Klaviyo standard vers Liquid Shopify (`person.first_name` → `customer.first_name`, etc.).
-9. Substitutions custom (si `--mapping`).
-10. Annotation `<!-- KL -->` pour les variables non mappables.
-11. Extraction du `<body>`, retrait des `<head>` / `<meta>` / `<title>` / `<style>` globaux.
-12. Enveloppe dans un `<div max-width:600px>`.
-13. Minification HTML.
+1. Strip the Klaviyo export comment header.
+2. Strip `<script>` tags.
+3. Strip pixels and `@import` `klaviyo.com`.
+4. Neutralize tracking `href`s (replaced with `href="#"`).
+5. Strip `<klaviyo:*>` tags.
+6. Strip Outlook MSO conditional comments.
+7. Inline simple CSS rules (`.class`, `#id`, `tag`).
+8. Substitute standard Klaviyo variables to Shopify Liquid (`person.first_name` → `customer.first_name`, etc.).
+9. Custom substitutions (if `--mapping`).
+10. Annotate non-mappable variables with `<!-- KL -->`.
+11. Extract the `<body>`, strip global `<head>` / `<meta>` / `<title>` / `<style>`.
+12. Wrap inside a `<div max-width:600px>`.
+13. HTML minification.
 
-## Règle métier
+## Business rule
 
-Shopify Email impose **50 ko max par template**. Le rapport
-indique d'un coup d'œil quels templates dépassent.
+Shopify Email enforces a **50 KB max per template**. The report
+flags any template exceeding the limit.
 
-## Variables Liquid Shopify Email principales
+## Main Shopify Email Liquid variables
 
-| Variable | Contexte |
+| Variable | Context |
 |---|---|
-| `{{ customer.first_name }}` | Profil client |
-| `{{ customer.email }}` | Profil client |
-| `{{ shop.name }}`, `{{ shop.url }}` | Boutique |
-| `{{ checkout.line_items }}` | Paniers abandonnés |
-| `{{ checkout.abandoned_checkout_url }}` | Paniers abandonnés |
-| `{{ order.name }}`, `{{ order.total_price | money }}` | Confirmations / suivi |
+| `{{ customer.first_name }}` | Customer profile |
+| `{{ customer.email }}` | Customer profile |
+| `{{ shop.name }}`, `{{ shop.url }}` | Store |
+| `{{ checkout.line_items }}` | Abandoned checkouts |
+| `{{ checkout.abandoned_checkout_url }}` | Abandoned checkouts |
+| `{{ order.name }}`, `{{ order.total_price | money }}` | Order confirmations / tracking |
 | `{{ product.title }}`, `{{ product.url }}` | Browse abandonment |
-| `{{ discount_code }}` | Codes promo automatiques |
-| `{{ unsubscribe_link }}` | Footer obligatoire |
+| `{{ discount_code }}` | Automatic discount codes |
+| `{{ unsubscribe_link }}` | Mandatory footer |
 
-Référence : <https://shopify.dev/docs/themes/liquid/reference/objects>
+Reference: <https://shopify.dev/docs/themes/liquid/reference/objects>

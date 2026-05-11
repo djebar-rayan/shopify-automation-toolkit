@@ -1,43 +1,43 @@
 ---
 name: recurring-monitor
-description: Configure un audit Shopify récurrent automatisé (hebdomadaire/mensuel) via CronCreate ou n8n, compare les résultats avec l'audit précédent et génère un rapport de progression delta. Use when the user wants to schedule recurring audits, monitor KPI evolution over time, set up weekly/monthly Shopify store health checks, or track SEO improvement progress.
+description: Sets up a recurring (weekly/monthly) automated Shopify audit via CronCreate or n8n, compares results with the previous audit and produces a delta progress report. Use when the user wants to schedule recurring audits, monitor KPI evolution over time, set up weekly/monthly Shopify store health checks, or track SEO improvement progress.
 ---
 
 # Recurring Monitor
 
-Configure des audits Shopify automatisés récurrents et suit la progression des KPIs
-dans le temps.
+Sets up recurring automated Shopify audits and tracks KPI progress
+over time.
 
 ## Instructions
 
-### Étape 1 — Choisir le mode de planification
+### Step 1 — Choose a scheduling mode
 
-**Option A — CronCreate (Claude Code natif)**
-- Exécute directement dans Claude Code via le skill `schedule`
-- Requiert que Claude Code soit lancé au moment de l'exécution
+**Option A — CronCreate (Claude Code native)**
+- Runs directly in Claude Code through the `schedule` skill
+- Requires Claude Code to be running at execution time
 
-**Option B — n8n Workflow (autonome)**
-- S'exécute même quand Claude Code est fermé
-- Envoie les résultats par email/webhook
+**Option B — n8n workflow (autonomous)**
+- Runs even when Claude Code is closed
+- Sends results via email/webhook
 
-### Étape 2 — Fréquences recommandées
+### Step 2 — Recommended cadence
 
-| Cas d'usage | Fréquence | Justification |
+| Use case | Cadence | Rationale |
 |---|---|---|
-| Suivi SEO (meta) | Hebdomadaire | Les changements prennent 1-2 semaines à propager |
-| Suivi contenu | Bi-mensuel | Enrichissement progressif |
-| Surveillance stock/prix | Quotidien | Changements rapides |
-| Audit complet | Mensuel | Vue d'ensemble |
+| SEO tracking (meta) | Weekly | Changes take 1–2 weeks to propagate |
+| Content tracking | Bi-weekly | Progressive enrichment |
+| Stock/price watch | Daily | Fast-moving changes |
+| Full audit | Monthly | Big-picture overview |
 
-### Étape 3 — Diff entre audits
+### Step 3 — Diff between audits
 
-Modifier `audit/full-audit.js` (ou wrapper) pour supporter `--diff` :
+Modify `audit/full-audit.js` (or wrap it) to support `--diff`:
 
-1. Sauvegarder chaque audit avec timestamp dans `audit-history/audit-YYYY-MM-DD.json`
-2. Calculer le delta vs l'avant-dernier
-3. Générer un rapport delta lisible
+1. Save every audit with a timestamp in `audit-history/audit-YYYY-MM-DD.json`
+2. Compute the delta vs the previous one
+3. Generate a readable delta report
 
-Squelette JS :
+JS skeleton:
 
 ```javascript
 const HIST = path.join(config.WORKSPACE, 'audit-history');
@@ -56,56 +56,56 @@ if (process.argv.includes('--diff')) {
 }
 ```
 
-### Étape 4 — Configurer Cron (Option A)
+### Step 4 — Configure Cron (Option A)
 
-Via le skill `schedule` :
+Via the `schedule` skill:
 
 ```
-Créer un trigger hebdomadaire (lundi 8h) qui :
-1. Lance "node audit/full-audit.js --diff"
-2. Lit audit-report.md
-3. Envoie un résumé des changements
+Create a weekly trigger (Monday 8am) that:
+1. Runs "node audit/full-audit.js --diff"
+2. Reads audit-report.md
+3. Sends a summary of the changes
 ```
 
-### Étape 5 — Configurer n8n (Option B)
+### Step 5 — Configure n8n (Option B)
 
-Workflow :
+Workflow:
 
-1. **Trigger** : Schedule (cron `0 8 * * 1` = lundi 8h)
-2. **Execute Command** : `node <path>/audit/full-audit.js --diff`
-3. **Read File** : `audit-report.md`
-4. **Email/Slack/Webhook** : envoyer le résumé
+1. **Trigger**: Schedule (cron `0 8 * * 1` = Monday 8am)
+2. **Execute Command**: `node <path>/audit/full-audit.js --diff`
+3. **Read File**: `audit-report.md`
+4. **Email/Slack/Webhook**: send the summary
 
-### Étape 6 — Format du rapport de progression
+### Step 6 — Progress report format
 
 ```markdown
-# Rapport — Évolution des KPIs (semaine {date})
+# Report — KPI evolution (week of {date})
 
-## Progression
-| KPI | Semaine dernière | Cette semaine | Delta |
+## Progress
+| KPI | Last week | This week | Delta |
 |---|---|---|---|
-| Score SEO | X.X/10 | Y.Y/10 | +0.X |
-| Problèmes P1 | A | B | -C ✓ |
-| Produits sans meta | A | B | -C ✓ |
+| SEO score | X.X/10 | Y.Y/10 | +0.X |
+| P1 issues | A | B | -C ✓ |
+| Products without meta | A | B | -C ✓ |
 
-## Corrections appliquées
-- … (déduit du delta de flags)
+## Applied corrections
+- … (derived from the flag delta)
 
-## Restant à faire
-- Priorité 1 : …
-- Priorité 2 : …
+## Remaining work
+- Priority 1: …
+- Priority 2: …
 ```
 
-### Étape 7 — Alertes
+### Step 7 — Alerts
 
-Configurer des alertes si :
+Configure alerts when:
 
-- Score global baisse de > 0.5 point
-- Nombre de produits actifs change brutalement
-- Un produit phare perd ses meta SEO (régression)
+- The overall score drops by more than 0.5 point
+- The active product count changes abruptly
+- A flagship product loses its SEO meta (regression)
 
-### Étape 8 — Rotation
+### Step 8 — Rotation
 
-- Garder les 12 derniers audits (≈ 3 mois)
-- Ne jamais supprimer le **premier** audit (baseline historique)
-- Stocker dans `audit-history/` (gitignoré par défaut)
+- Keep the last 12 audits (~ 3 months)
+- Never delete the **first** audit (historical baseline)
+- Store under `audit-history/` (gitignored by default)

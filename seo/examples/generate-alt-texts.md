@@ -1,35 +1,34 @@
-# Génération d'alt texts manquants
+# Generate missing alt texts
 
-> Cette recette utilise directement la commande dédiée (formules locales,
-> pas d'appel Gemini) :
+> This recipe uses the dedicated command (local formulas, no Gemini call):
 >
 > ```
 > node seo/seo-update.js --target=alt           # dry-run
-> node seo/seo-update.js --target=alt --confirm # applique
+> node seo/seo-update.js --target=alt --confirm # apply
 > ```
 >
-> Le format des alt texts est défini dans `lib/builders/seo-meta.js::generateAltText`.
+> The alt-text format lives in `lib/builders/seo-meta.js::generateAltText`.
 
-## Cible
+## Target
 
-- **Scope** : products
-- **Filtre** : status ACTIVE, no_alt
-- **Nb entités concernées** : 0
+- **Scope**: products
+- **Filter**: status ACTIVE, no_alt
+- **Entities affected**: 0
 
 ## Action
 
-- **Type** : update
-- **Champ modifié** : (alt text par image, pas via productUpdate)
-- **Valeur** : produit par les formules de `lib/builders/seo-meta.js`
+- **Type**: update
+- **Field**: (alt text per image, not via productUpdate)
+- **Value**: produced by formulas in `lib/builders/seo-meta.js`
 
-## Validation avant application
+## Validation
 
-- [x] Vérifier que les entités cibles sont bien dans `store-data/products.md`
-- [x] Afficher les changements prévus avant d'appliquer
-- [x] Demander confirmation `o/N` avant la mutation
+- [x] Verify target entities are in `store-data/products.md`
+- [x] Show planned changes (dry-run)
+- [x] Ask confirmation y/N before mutation
 
-## Critères de succès
+## Success criteria
 
-- 100 % des images des produits filtrés disposent d'un alt text non vide
+- 100% of images on filtered products have a non-empty alt text
 
-## Résultats
+## Results

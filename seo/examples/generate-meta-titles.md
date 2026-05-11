@@ -1,35 +1,35 @@
-# Génération de meta titles SEO
+# Generate SEO meta titles
 
-> Cette recette utilise les **formules** de `lib/builders/seo-meta.js`
-> (sans Gemini), rapides et déterministes.
+> This recipe uses the **formulas** in `lib/builders/seo-meta.js`
+> (no Gemini, fast and deterministic).
 >
-> Lancer directement : `node seo/seo-update.js --target=titles --confirm`
+> Run directly: `node seo/seo-update.js --target=titles --confirm`
 >
-> Ou via fichier de tâche : copier ce fichier dans `tasks/`, ajuster
-> le filtre, puis `node content/update-products.js --task tasks/<ce-fichier>`
-> en remplaçant la valeur par le contenu de votre choix.
+> Or via a task file: copy this file to `tasks/`, adjust the filter,
+> then `node content/update-products.js --task tasks/<this-file>` after
+> replacing the value with the content of your choice.
 
-## Cible
+## Target
 
-- **Scope** : products
-- **Filtre** : status ACTIVE, seo_title manquant
-- **Nb entités concernées** : 0
+- **Scope**: products
+- **Filter**: status ACTIVE, seo_title missing
+- **Entities affected**: 0
 
 ## Action
 
-- **Type** : update
-- **Champ modifié** : seo.title
-- **Valeur** : générer via Gemini avec ce prompt : "Rédige un meta title SEO pour ce produit, max 70 caractères, format `[mot-clé] | [marque]`. Pas de Markdown."
+- **Type**: update
+- **Field**: seo.title
+- **Value**: generate via Gemini with this prompt: "Write an SEO meta title for this product, max 70 characters, format `[keyword] | [brand]`. No Markdown."
 
-## Validation avant application
+## Validation
 
-- [x] Vérifier que les entités cibles sont bien dans `store-data/products.md`
-- [x] Afficher les changements prévus avant d'appliquer (dry-run automatique)
-- [x] Demander confirmation `o/N` avant la mutation
+- [x] Verify target entities are in `store-data/products.md`
+- [x] Show planned changes (dry-run)
+- [x] Ask confirmation y/N before mutation
 
-## Critères de succès
+## Success criteria
 
-- 100 % des produits filtrés ont un meta title SEO ≤ 70 caractères
-- Re-fetch automatique de `store-data/products.md` après modifications
+- 100% of filtered products have an SEO meta title ≤ 70 characters
+- Re-fetch `store-data/products.md` after the run
 
-## Résultats
+## Results

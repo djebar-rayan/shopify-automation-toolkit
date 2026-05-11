@@ -1,27 +1,30 @@
 ---
 name: prompt-optimizer
-description: Optimise les requêtes GraphQL Shopify, les appels API, et les prompts Claude pour minimiser le nombre d'appels, réduire la latence et éviter les erreurs courantes (rate limits, scopes manquants, pagination). Use when GraphQL queries are slow, hitting rate limits, need pagination fixes, or when API calls can be batched or restructured for efficiency.
+description: Optimizes Shopify GraphQL queries, API calls and Claude prompts to minimize the number of calls, reduce latency and avoid common mistakes (rate limits, missing scopes, pagination). Use when GraphQL queries are slow, hitting rate limits, need pagination fixes, or when API calls can be batched or restructured for efficiency.
 ---
 
 # Prompt Optimizer
 
-Optimise les requêtes GraphQL Shopify et les appels API pour maximiser l'efficacité et minimiser les coûts.
+Optimizes Shopify GraphQL queries and API calls to maximize efficiency
+and minimize cost.
 
 ## Instructions
 
-### Step 1 : Auditer les requêtes existantes
+### Step 1 — Audit the existing queries
 
-Lire le fichier cible (ex. `shopify-audit.js`) et identifier :
-- Requêtes GraphQL qui sélectionnent trop de champs (over-fetching)
-- Requêtes qui pourraient être fusionnées en une seule
-- Boucles de pagination inefficaces
-- Mutations exécutées une par une au lieu de batch
+Read the target file (e.g. `audit/full-audit.js`) and look for:
 
-### Step 2 : Règles d'optimisation GraphQL Shopify
+- GraphQL queries that select too many fields (over-fetching)
+- Queries that could be merged into a single one
+- Inefficient pagination loops
+- Mutations executed one by one instead of in batch
 
-**Règle 1 — Ne sélectionner que les champs nécessaires**
+### Step 2 — Shopify GraphQL optimization rules
+
+**Rule 1 — Only select the fields you actually need**
+
 ```graphql
-# Avant (over-fetching)
+# Before (over-fetching)
 products(first: 50) {
   edges { node { id title handle descriptionHtml tags vendor productType status
     images(first: 10) { edges { node { id url altText width height } } }
@@ -29,7 +32,7 @@ products(first: 50) {
   } }
 }
 
-# Après (champs stricts)
+# After (strict fields)
 products(first: 50) {
   edges { node { id title handle descriptionHtml tags
     images(first: 5) { edges { node { id altText } } }
@@ -38,45 +41,51 @@ products(first: 50) {
 }
 ```
 
-**Règle 2 — Batch les mutations**
+**Rule 2 — Batch mutations**
+
 ```graphql
-# Avant : 1 mutation par produit = N appels API
-# Après : metafieldsSet accepte jusqu'à 25 metafields par appel
+# Before: 1 mutation per product = N API calls
+# After: metafieldsSet accepts up to 25 metafields per call
 mutation { metafieldsSet(metafields: [{...}, {...}, ...25 max]) { ... } }
 ```
 
-**Règle 3 — Pagination optimale**
-- Batch size 50 pour les produits (max 250 mais coûte plus en query cost)
-- Utiliser `pageInfo { hasNextPage endCursor }` pas `totalCount`
-- Ne pas re-fetcher des pages déjà récupérées
+**Rule 3 — Optimal pagination**
 
-**Règle 4 — Éviter les N+1**
+- Batch size 50 for products (max 250, but costs more in query points)
+- Use `pageInfo { hasNextPage endCursor }`, not `totalCount`
+- Do not re-fetch pages you already retrieved
+
+**Rule 4 — Avoid N+1**
+
 ```graphql
-# Mauvais : query produit PUIS query metafields séparée
-# Bon : inclure metafields(namespace: "global", first: 5) dans la query produit
+# Bad: query product THEN a separate query for metafields
+# Good: include metafields(namespace: "global", first: 5) inside the product query
 ```
 
-**Règle 5 — Rate limits Shopify**
-- REST: 2 req/s (leaky bucket 40)
-- GraphQL: coût calculé par champ (shop info = 1, product = 2, variants = 2/variant)
-- Metafields: coûteux — limiter `first: 5` pas `first: 250`
-- En cas de 429 : attendre `Retry-After` header (1-60s)
+**Rule 5 — Shopify rate limits**
 
-### Step 3 : Optimisation des scripts Node.js
+- REST: 2 req/s (leaky bucket of 40)
+- GraphQL: cost is computed per field (shop info = 1, product = 2, variants = 2/variant)
+- Metafields: expensive — limit to `first: 5`, not `first: 250`
+- On 429: wait for the `Retry-After` header (1–60 s)
 
-**Ajouter un délai adaptatif entre les requêtes** :
+### Step 3 — Node.js script optimization
+
+**Add an adaptive delay between requests**:
+
 ```javascript
-// Avant
+// Before
 for (const batch of batches) { execQuery(batch); }
 
-// Après — respecter les rate limits
+// After — respect rate limits
 for (const batch of batches) {
   execQuery(batch);
-  await new Promise(r => setTimeout(r, 500)); // 500ms entre appels
+  await new Promise(r => setTimeout(r, 500)); // 500 ms between calls
 }
 ```
 
-**Mémoriser les résultats en cache local** :
+**Cache results locally**:
+
 ```javascript
 const CACHE_FILE = '.audit-tmp/cache.json';
 function cachedQuery(key, queryFn) {
@@ -92,30 +101,31 @@ function cachedQuery(key, queryFn) {
 }
 ```
 
-### Step 4 : Optimisation des prompts Claude
+### Step 4 — Claude prompt optimization
 
-Si le script utilise Claude API pour générer du contenu :
+If the script uses the Claude API for content generation:
 
-- **Utiliser le prompt caching** (`cache_control: { type: "ephemeral" }`) pour les system prompts longs
-- **Batching Claude** : générer 10 meta titles en un seul appel plutôt que 1 par 1
-- **Modèle adapté** : Haiku pour les tâches répétitives simples (meta descriptions), Sonnet pour le contenu complexe
+- **Use prompt caching** (`cache_control: { type: "ephemeral" }`) for long system prompts
+- **Batch with Claude**: generate 10 meta titles in one call rather than 1 per call
+- **Right model for the job**: Haiku for simple repetitive tasks (meta descriptions), Sonnet for complex content
 
-### Step 5 : Rapport d'optimisation
+### Step 5 — Optimization report
 
-Afficher :
+Display:
+
 ```
-Avant optimisation :
-  - X requêtes GraphQL pour Y produits
-  - Coût estimé : Z query points
-  - Durée estimée : T secondes
+Before optimization:
+  - X GraphQL queries for Y products
+  - Estimated cost: Z query points
+  - Estimated duration: T seconds
 
-Après optimisation :
-  - X' requêtes (économie : N%)
-  - Coût estimé : Z' query points
-  - Durée estimée : T' secondes
+After optimization:
+  - X' queries (saving: N%)
+  - Estimated cost: Z' query points
+  - Estimated duration: T' seconds
 ```
 
-### Step 6 : Appliquer les optimisations
+### Step 6 — Apply the optimizations
 
-Modifier le fichier cible avec les optimisations validées.
-Toujours tester sur 5 produits avant de lancer sur 100.
+Modify the target file with the validated optimizations.
+Always test on 5 products before running on 100.

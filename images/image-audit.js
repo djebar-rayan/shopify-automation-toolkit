@@ -1,16 +1,16 @@
 'use strict';
 
 // ============================================================
-// images/image-audit.js — Audit du volume et de la qualité des images
+// images/image-audit.js — Audit image counts and alt-text quality
 // ------------------------------------------------------------
-// Lecture seule. Pour chaque produit du filtre :
-//   - nombre d'images
-//   - nombre d'alt texts manquants
-//   - flag "image_count_low" si < SHOP_IMAGE_MIN
+// Read-only. For each product in the filter:
+//   - image count
+//   - number of missing alt texts
+//   - "image_count_low" flag if < SHOP_IMAGE_MIN
 //
-// Pilotable par fichier de tâche OU par flags directs.
+// Drivable through a task file OR direct flags.
 //
-// Usage :
+// Usage:
 //   node images/image-audit.js --task tasks/audit-images.md
 //   node images/image-audit.js --filter "status ACTIVE, images < 3"
 // ============================================================
@@ -29,51 +29,51 @@ async function main() {
   if (taskPath) {
     const abs = path.isAbsolute(taskPath) ? taskPath : path.join(process.cwd(), taskPath);
     task = parseTaskFile(abs);
-    if (task.cible.scope !== 'products') { console.error(`❌  scope=products requis`); process.exit(1); }
-    filter = task.cible.filter;
+    if (task.target.scope !== 'products') { console.error(`❌  scope=products required`); process.exit(1); }
+    filter = task.target.filter;
     taskName = task.name;
   } else {
-    filter = getFlag('filter', 'tous');
-    taskName = `Audit images ad-hoc — ${filter}`;
+    filter = getFlag('filter', 'all');
+    taskName = `Ad-hoc image audit — ${filter}`;
   }
 
   console.log(`\n━━━ image-audit ━━━`);
-  console.log(`  Tâche  : ${taskName}`);
-  console.log(`  Filtre : ${filter}\n`);
+  console.log(`  Task  : ${taskName}`);
+  console.log(`  Filter: ${filter}\n`);
 
   const blocks = parseStoreDataBlocks('products.md');
   const matched = applyFilter(blocks, filter);
-  if (!matched.length) { console.log('  Aucune cible.'); return; }
+  if (!matched.length) { console.log('  No target.'); return; }
 
   let totalImg = 0, totalNoAlt = 0, lowCount = 0;
-  console.log(`  ${matched.length} produits :\n`);
+  console.log(`  ${matched.length} products:\n`);
   for (const b of matched.slice(0, 100)) {
-    const noAlt = (b.raw.match(/\| _\(absent\)_ \|/g) || []).length;
+    const noAlt = (b.raw.match(/\| _\(missing\)_ \|/g) || []).length;
     totalImg += b.images;
     totalNoAlt += noAlt;
     if (b.images < config.IMAGE_MIN) lowCount++;
     const flag = b.images < config.IMAGE_MIN ? ' ⚠️ image_count_low' : '';
     console.log(`    ${(b.handle || '').padEnd(50)} images=${b.images} no_alt=${noAlt}${flag}`);
   }
-  if (matched.length > 100) console.log(`    … (+${matched.length - 100} produits)`);
+  if (matched.length > 100) console.log(`    … (+${matched.length - 100} products)`);
 
-  console.log(`\n  Synthèse :`);
-  console.log(`    Total produits audités : ${matched.length}`);
+  console.log(`\n  Summary:`);
+  console.log(`    Total products audited : ${matched.length}`);
   console.log(`    Total images           : ${totalImg}`);
-  console.log(`    Alt texts manquants    : ${totalNoAlt}`);
-  console.log(`    Produits < ${config.IMAGE_MIN} images   : ${lowCount}`);
+  console.log(`    Missing alt texts      : ${totalNoAlt}`);
+  console.log(`    Products < ${config.IMAGE_MIN} images    : ${lowCount}`);
 
   if (task) {
     appendTaskResult(task.path, [
-      `Mode : audit images (lecture seule)`,
-      `Produits audités : ${matched.length}`,
-      `Total images : ${totalImg}`,
-      `Alt manquants : ${totalNoAlt}`,
-      `Produits < ${config.IMAGE_MIN} images : ${lowCount}`,
+      `Mode: image audit (read-only)`,
+      `Products audited: ${matched.length}`,
+      `Total images: ${totalImg}`,
+      `Missing alt texts: ${totalNoAlt}`,
+      `Products < ${config.IMAGE_MIN} images: ${lowCount}`,
     ]);
-    console.log(`\n  ✓ Résultats appendés à ${path.basename(task.path)}`);
+    console.log(`\n  ✓ Results appended to ${path.basename(task.path)}`);
   }
-  console.log('\n━━━ Fin image-audit ━━━\n');
+  console.log('\n━━━ End image-audit ━━━\n');
 }
 
 main().catch(e => { console.error('FATAL:', e.message); process.exit(1); });

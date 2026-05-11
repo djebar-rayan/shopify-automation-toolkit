@@ -1,99 +1,101 @@
 ---
 name: shopify-content-enricher
-description: Génère des descriptions produit HTML structurées (>150 mots, balises h2/ul/strong, storytelling de marque) et les applique via productUpdate. Use when products have desc_missing, desc_too_short, or desc_no_html flags, or when the user asks to enrich/rewrite product descriptions for Shopify.
+description: Generates structured HTML product descriptions (>150 words, h2/ul/strong tags, brand storytelling) and applies them via productUpdate. Use when products have desc_missing, desc_too_short, or desc_no_html flags, or when the user asks to enrich/rewrite product descriptions for Shopify.
 ---
 
 # Shopify Content Enricher
 
-Réécrit des descriptions produit HTML structurées (≥ 150 mots) via Gemini Text et les
-applique via `productUpdate`. La marque (`SHOP_BRAND_NAME`) et le vocabulaire de niche
-(`SHOP_BRAND_VOCABULARY`) sont lus dans `.env`.
+Rewrites HTML structured product descriptions (≥ 150 words) through
+Gemini Text and applies them via `productUpdate`. The brand
+(`SHOP_BRAND_NAME`) and the niche vocabulary (`SHOP_BRAND_VOCABULARY`)
+are read from `.env`.
 
 ## Instructions
 
-### Étape 1 — Identifier les produits concernés
+### Step 1 — Identify the affected products
 
 ```bash
 node audit/audit.js --filter "status ACTIVE, desc_words < 150"
 ```
 
-Ou lire `audit-report.md` pour les flags `desc_missing`, `desc_too_short`, `desc_no_html`.
+Or read `audit-report.md` for the `desc_missing`, `desc_too_short`,
+`desc_no_html` flags.
 
-### Étape 2 — Créer la tâche
+### Step 2 — Create the task
 
 ```markdown
 # tasks/enrich-descriptions.md
 
-## Cible
-- Scope : products
-- Filtre : status ACTIVE, desc_words < 150
+## Target
+- Scope: products
+- Filter: status ACTIVE, desc_words < 150
 
 ## Action
-- Type : update
-- Champ modifié : descriptionHtml
-- Valeur : générer via Gemini avec ce prompt : "Rédige une description produit HTML structurée d'au moins 150 mots, avec au moins un h2, une liste à puces (ul/li), et un strong pour mettre en valeur un bénéfice principal. Inclure au moins un terme du vocabulaire de marque s'il est défini. Pas de DOCTYPE/html/body, pas de Markdown, pas de triples backticks."
+- Type: update
+- Field: descriptionHtml
+- Value: generate via Gemini with this prompt: "Write an HTML structured product description of at least 150 words, with at least one h2, one bullet list (ul/li), and one strong tag highlighting a main benefit. Include at least one term from the brand vocabulary when defined. No DOCTYPE/html/body, no Markdown, no triple backticks."
 
-## Validation avant application
-- [x] Vérifier dans store-data/products.md
-- [x] Afficher dry-run
-- [x] Demander confirmation
+## Validation
+- [x] Verify in store-data/products.md
+- [x] Show dry-run
+- [x] Ask confirmation
 
-## Critères de succès
-- 100 % des produits ciblés ont une description ≥ 150 mots
-- HTML structuré : h2, ul, li, strong
-- Bloc livraison toujours en début (cf. lib/builders/livraison.js)
+## Success criteria
+- 100% of targeted products have a description ≥ 150 words
+- Structured HTML: h2, ul, li, strong
+- Shipping block always at the start (see lib/builders/shipping.js)
 ```
 
-### Structure HTML recommandée
+### Recommended HTML structure
 
 ```html
-<h2>Présentation</h2>
-<p>{Phrase d'accroche orientée bénéfice principal}</p>
+<h2>Overview</h2>
+<p>{Hook sentence built around the main benefit}</p>
 
-<h2>Caractéristiques</h2>
+<h2>Features</h2>
 <ul>
-  <li><strong>Matériau</strong> : …</li>
-  <li><strong>Dimensions</strong> : …</li>
-  <li><strong>Origine</strong> : …</li>
-  <li><strong>Entretien</strong> : …</li>
+  <li><strong>Material</strong>: …</li>
+  <li><strong>Dimensions</strong>: …</li>
+  <li><strong>Origin</strong>: …</li>
+  <li><strong>Care</strong>: …</li>
 </ul>
 
-<h2>Pourquoi choisir ce produit</h2>
-<p>{Argument différenciateur, lien avec le vocabulaire de marque}</p>
+<h2>Why choose this product</h2>
+<p>{Differentiating argument, tied to the brand vocabulary}</p>
 ```
 
-### Règles HTML
+### HTML rules
 
-- Balises autorisées : `<h2>`, `<p>`, `<ul>`, `<li>`, `<strong>`, `<em>`
-- Au moins une `<ul>` (caractéristiques)
-- Au moins un `<strong>` (bénéfice clé)
-- Pas de Markdown résiduel (`#`, `**`, triples backticks)
+- Allowed tags: `<h2>`, `<p>`, `<ul>`, `<li>`, `<strong>`, `<em>`
+- At least one `<ul>` (features)
+- At least one `<strong>` (key benefit)
+- No leftover Markdown (`#`, `**`, triple backticks)
 
-### Étape 3 — Lancer
+### Step 3 — Run
 
 ```bash
 node content/update-products.js --task tasks/enrich-descriptions.md
 ```
 
-Le script :
-1. parse la tâche
-2. applique le filtre sur `store-data/products.md`
-3. pour chaque produit : Gemini Text avec contexte produit
-4. dry-run sur les 3 premiers
-5. demande confirmation o/N
-6. applique `productUpdate` (délai 500 ms entre chaque)
-7. append le bloc « Résultats » à la tâche
+The script:
+1. parses the task
+2. applies the filter against `store-data/products.md`
+3. for each product: Gemini Text with product context
+4. dry-run on the first 3
+5. asks confirmation y/N
+6. applies `productUpdate` (500 ms delay between calls)
+7. appends the `## Results` block to the task
 
-### Convention « livraison en début »
+### "Shipping at the start" convention
 
-Si la marque utilise un bloc livraison HTML (`SHOP_LIVRAISON_HTML`),
-celui-ci doit **toujours ouvrir** la description. Pour repositionner :
+If the brand uses an HTML shipping block (`SHOP_SHIPPING_HTML`), it must
+always **open** the description. To reposition:
 
 ```javascript
-const { repositionLivraison, injectLivraison } = require('./lib/builders/livraison');
+const { repositionShipping, injectShipping } = require('./lib/builders/shipping');
 ```
 
-### Étape 4 — Re-fetch
+### Step 4 — Re-fetch
 
 ```bash
 node fetch-store-data.js
@@ -101,5 +103,5 @@ node fetch-store-data.js
 
 ## Limitations
 
-- Rate limit Gemini : 10 req/min en tier gratuit → délai 6.5 s entre appels.
-- Sur erreur 429/503 : retry automatique après 60 s (configuré dans `lib/gemini-text.js`).
+- Gemini rate limit: 10 req/min on the free tier → 6.5 s delay between calls.
+- On 429/503 errors: automatic retry after 60 s (configured in `lib/gemini-text.js`).

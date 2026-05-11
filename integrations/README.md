@@ -1,33 +1,33 @@
-# Intégrations tierces
+# Third-party integrations
 
-Ce dossier accueille les **connecteurs vers des services tiers**
-qui ne sont pas Shopify (ESP, automation, analytics, paiement…).
+This folder hosts the **connectors to third-party services** that are
+not Shopify (ESP, automation, analytics, payment…).
 
-Chaque intégration vit dans son propre sous-dossier avec :
+Each integration lives in its own subfolder with:
 
-- un script principal (`<integration>.js`)
-- un `README.md` décrivant le périmètre, les credentials requis et
-  les fichiers de sortie
-- éventuellement des fichiers de configuration / mapping
+- a main script (`<integration>.js`)
+- a `README.md` describing the scope, required credentials and
+  output files
+- optionally configuration / mapping files
 
-## Intégrations fournies
+## Provided integrations
 
-| Dossier | Rôle |
+| Folder | Role |
 |---|---|
-| `klaviyo/` | Export read-only Klaviyo → fichiers Markdown + templates HTML |
-| `shopify-email/` | Adaptation générique de templates Klaviyo vers Shopify Email |
+| `klaviyo/` | Read-only Klaviyo export → Markdown files + HTML templates |
+| `shopify-email/` | Generic Klaviyo → Shopify Email template adaptation |
 
-## Ajouter une intégration
+## Adding an integration
 
-1. Créer un dossier `integrations/<nom>/`.
-2. Y placer un script qui lit ses secrets dans `lib/config` (via `.env`).
-3. Documenter dans un `README.md` les variables d'environnement requises et les sorties.
-4. **Lecture seule par défaut** : ne déclencher des écritures que sur action explicite de l'utilisateur (`--confirm`).
+1. Create a folder `integrations/<name>/`.
+2. Place a script that reads its secrets from `lib/config` (via `.env`).
+3. Document in a `README.md` the required environment variables and outputs.
+4. **Read-only by default**: only trigger writes on explicit user action (`--confirm`).
 
-## Pistes d'intégrations futures
+## Future integration ideas
 
-- **Brevo / Sendinblue** : équivalent ESP de Klaviyo (alternatif).
-- **n8n** : orchestrateur d'automations (webhooks Shopify → workflows).
-- **Google Merchant Center** : exports catalogue.
-- **Stripe** : croisement clients ↔ paiements pour métriques avancées.
-- **Plausible / Matomo** : analytics serveur.
+- **Brevo / Sendinblue**: alternative ESP to Klaviyo.
+- **n8n**: automation orchestrator (Shopify webhooks → workflows).
+- **Google Merchant Center**: catalog exports.
+- **Stripe**: cross-reference customers ↔ payments for advanced metrics.
+- **Plausible / Matomo**: server-side analytics.

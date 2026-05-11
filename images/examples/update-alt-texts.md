@@ -1,30 +1,30 @@
-# Mise à jour des alt texts manquants
+# Update missing alt texts
 
-> Recette : utilise les formules locales (`lib/builders/seo-meta.js`)
-> ou Gemini Vision pour des descriptions d'image plus riches.
+> Recipe: uses either local formulas (`lib/builders/seo-meta.js`)
+> or Gemini Vision for richer image descriptions.
 
-## Mode formule (rapide, gratuit)
+## Formula mode (fast, free)
 
 ```
 node images/image-alt.js                   # dry-run
-node images/image-alt.js --confirm         # applique
+node images/image-alt.js --confirm         # apply
 ```
 
-## Mode Vision (riche, payant)
+## Vision mode (rich, paid)
 
 ```
 node images/image-alt.js --mode=vision --confirm
 ```
 
-## Filtres
+## Filters
 
 ```
 node images/image-alt.js --filter "status ACTIVE, no_alt" --confirm
-node images/image-alt.js --filter "handle mon-produit" --confirm
+node images/image-alt.js --filter "handle my-product" --confirm
 ```
 
-## Critères de succès
+## Success criteria
 
-- Toutes les images des produits filtrés ont un alt text non vide
-- Longueur ≤ 512 caractères (limite Shopify)
-- Pas de doublons grossiers (formula utilise `joinUniq`)
+- Every image of every targeted product has a non-empty alt text
+- Length ≤ 512 characters (Shopify limit)
+- No duplicate output (formula mode uses `joinUniq`)

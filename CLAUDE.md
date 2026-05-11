@@ -1,178 +1,182 @@
-# CLAUDE.md — Règles techniques critiques
+# CLAUDE.md — Critical technical rules
 
-> Conventions et règles **non-négociables** pour quiconque (humain ou agent IA)
-> contribue à ce repo. Toute violation de ces règles a déjà cassé une boutique
-> Shopify dans le passé — chaque règle a un coût concret.
+> **Non-negotiable** conventions and rules for anyone (human or AI agent)
+> contributing to this repo. Every rule below already broke a Shopify
+> store at some point — each rule has a concrete cost.
 
 ---
 
 ## Stack
 
-- **Shopify CLI** ≥ 3.93 (passerelle Admin GraphQL)
-- **Node.js** ≥ 18 (built-ins uniquement, **aucune dépendance npm**)
-- **Gemini 3.1** (Google AI Studio, modèles Flash + Flash Image)
-- **Plateforme** : Windows 11 / macOS / Linux (PowerShell ou bash)
+- **Shopify CLI** ≥ 3.93 (Admin GraphQL gateway)
+- **Node.js** ≥ 18 (built-ins only, **no npm dependencies**)
+- **Gemini 3.1** (Google AI Studio, Flash + Flash Image models)
+- **Platforms**: Windows 11 / macOS / Linux (PowerShell or bash)
 
 ---
 
-## Règle 1 — Toutes les requêtes GraphQL passent par `--query-file`
+## Rule 1 — Every GraphQL request goes through `--query-file`
 
-Sur Windows, les accolades `{}` cassent le shell. **Jamais** de `--query` inline.
+On Windows, curly braces `{}` break the shell. **Never** use inline
+`--query`.
 
 ```javascript
-// ✅ CORRECT
+// CORRECT
 fs.writeFileSync(qFile, queryString, 'utf8');
 execSync(`shopify store execute --store ${STORE} --query-file "${qFile}" --output-file "${outFile}"`);
 
-// ❌ INTERDIT
+// FORBIDDEN
 execSync(`shopify store execute --store ${STORE} --query '{ products... }'`);
 ```
 
-Implémenté dans `lib/shopify-graphql.js::execGql()`.
+Implemented in `lib/shopify-graphql.js::execGql()`.
 
 ---
 
-## Règle 2 — `stdio: 'inherit'` obligatoire dans `execSync`
+## Rule 2 — `stdio: 'inherit'` is mandatory inside `execSync`
 
-Sans TTY, le Shopify CLI sort avec code 1 même quand la requête réussit.
+Without a TTY, the Shopify CLI exits with code 1 even when the request
+succeeds.
 
 ```javascript
-// ✅
+// CORRECT
 execSync(cmd, { encoding: 'utf8', timeout: 60000, stdio: 'inherit' });
 
-// ❌
+// FORBIDDEN
 execSync(cmd, { encoding: 'utf8', timeout: 60000, stdio: 'pipe' });
 ```
 
 ---
 
-## Règle 3 — La réponse GraphQL N'A PAS d'enveloppe `.data`
+## Rule 3 — The GraphQL response has NO `.data` envelope
 
-Le Shopify CLI écrit directement le contenu intérieur dans le fichier de sortie.
+The Shopify CLI writes the inner content directly to the output file.
 
 ```javascript
-// ✅ CORRECT — accès direct
+// CORRECT — direct access
 const edges  = res?.products?.edges || [];
 const target = res?.stagedUploadsCreate?.stagedTargets?.[0];
 
-// ❌ INTERDIT — double wrapper, retourne toujours undefined
+// FORBIDDEN — double wrapper, always returns undefined
 const edges  = res?.data?.products?.edges || [];
 const target = res?.data?.stagedUploadsCreate?.stagedTargets?.[0];
 ```
 
 ---
 
-## Règle 4 — `resource: 'PRODUCT_IMAGE'` pour les staged uploads
+## Rule 4 — `resource: 'PRODUCT_IMAGE'` for staged uploads
 
-Pour pousser une image vers un produit Shopify :
+When uploading an image to a Shopify product:
 
 ```javascript
-// ✅ CORRECT
+// CORRECT
 { resource: 'PRODUCT_IMAGE', filename, mimeType, httpMethod: 'POST' }
 
-// ❌ INTERDIT — rejette l'upload
+// FORBIDDEN — upload is rejected
 { resource: 'IMAGE', ... }
 ```
 
-Implémenté dans `lib/image-upload.js::stagedUploadFromFile()`.
+Implemented in `lib/image-upload.js::stagedUploadFromFile()`.
 
 ---
 
-## Règle 5 — Le bloc livraison `📦` ouvre TOUJOURS la description
+## Rule 5 — The shipping `📦` block ALWAYS opens the description
 
-Convention métier (configurable via `SHOP_LIVRAISON_HTML` dans `.env`).
+Business convention (configurable via `SHOP_SHIPPING_HTML` in `.env`).
 
 ```javascript
-// ✅ CORRECT — utilise les builders
-const { injectLivraison, repositionLivraison } = require('./lib/builders/livraison');
-const newHtml = injectLivraison(currentHtml);
+// CORRECT — use the builders
+const { injectShipping, repositionShipping } = require('./lib/builders/shipping');
+const newHtml = injectShipping(currentHtml);
 
-// ❌ INTERDIT — bloc en fin
-const newHtml = cleaned + LIVRAISON_BLOCK;
+// FORBIDDEN — block placed at the end
+const newHtml = cleaned + SHIPPING_BLOCK;
 ```
 
 ---
 
-## Règle 6 — `read_metafields` n'est PAS un scope OAuth Shopify valide
+## Rule 6 — `read_metafields` is NOT a valid Shopify OAuth scope
 
-Les metafields produits sont inclus dans `read_products`. Ne jamais ajouter
-`read_metafields` ou `write_metafields` dans `shopify store auth --scopes` :
-cela provoque une OAuth error.
+Product metafields are included in `read_products`. Never add
+`read_metafields` or `write_metafields` to `shopify store auth --scopes`:
+that triggers an OAuth error.
 
 ```bash
-# ✅ CORRECT
+# CORRECT
 shopify store auth --store <store> \
   --scopes read_products,write_products,read_content,write_content,read_themes,write_files
 
-# ❌ INTERDIT — OAuth error
+# FORBIDDEN — OAuth error
 ... --scopes read_products,read_metafields,write_metafields,...
 ```
 
 ---
 
-## Modèles Gemini
+## Gemini models
 
-| Constante | Valeur par défaut | Usage |
+| Constant | Default value | Usage |
 |---|---|---|
-| `GEMINI_MODEL` | `gemini-3.1-flash-image-preview` | **Génération/édition d'images uniquement** |
-| `GEMINI_TEXT_MODEL` | `gemini-3.1-flash-lite-preview` | Texte (descriptions, prompts, meta) |
-| `GEMINI_VISION_MODEL` | `gemini-3.1-flash-lite-preview` | Analyse d'images (vision) |
+| `GEMINI_MODEL` | `gemini-3.1-flash-image-preview` | **Image generation/editing only** |
+| `GEMINI_TEXT_MODEL` | `gemini-3.1-flash-lite-preview` | Text (descriptions, prompts, meta) |
+| `GEMINI_VISION_MODEL` | `gemini-3.1-flash-lite-preview` | Image analysis (vision) |
 
-> `GEMINI_VISION_MODEL` et `GEMINI_TEXT_MODEL` partagent la même valeur :
-> Flash Lite gère nativement texte + images.
+> `GEMINI_VISION_MODEL` and `GEMINI_TEXT_MODEL` share the same value:
+> Flash Lite handles both text + images natively.
 >
-> Ne JAMAIS utiliser `GEMINI_MODEL` (Flash Image) pour analyse ou texte —
-> il refuse avec `blockReason: OTHER`.
+> NEVER use `GEMINI_MODEL` (Flash Image) for analysis or text — it
+> refuses with `blockReason: OTHER`.
 
-La clé API doit commencer par `AIza` (Google AI Studio). Les tokens OAuth
-(`AQ...`) ne fonctionnent pas.
+The API key must start with `AIza` (Google AI Studio). OAuth tokens
+(`AQ...`) do not work.
 
 ---
 
-## Pattern `execGql` (`lib/shopify-graphql.js`)
+## `execGql` pattern (`lib/shopify-graphql.js`)
 
-1. Écrire la query dans `.audit-tmp/gq.graphql`
-2. Écrire les variables dans `.audit-tmp/gv.json`
-3. Exécuter `shopify store execute ... --query-file ... --output-file ...`
-4. Lire le fichier de sortie et parser le JSON
-5. Retourner le JSON parsé (sans enveloppe `.data`)
+1. Write the query to `.audit-tmp/gq.graphql`
+2. Write variables to `.audit-tmp/gv.json`
+3. Run `shopify store execute ... --query-file ... --output-file ...`
+4. Read the output file and parse the JSON
+5. Return the parsed JSON (no `.data` envelope)
 
-## Pattern staged upload (`lib/image-upload.js`)
+## Staged upload pattern (`lib/image-upload.js`)
 
 ```
 stagedUploadsCreate → resourceUrl + parameters + url
   ↓
-multipartPost (upload binaire vers le bucket de staging)
+multipartPost (binary upload to the staging bucket)
   ↓
-productCreateMedia (attache resourceUrl au produit)
+productCreateMedia (attaches resourceUrl to the product)
 ```
 
-## Pipeline génération image
+## Image generation pipeline
 
 ```
 buildPrompt(product, …)
   ↓
-callGeminiTextWithRetry — amélioration du prompt (optionnelle)
-  ↓ délai DELAY_GEMINI
-callGeminiImageWithRetry — génération
+callGeminiTextWithRetry — prompt improvement (optional)
+  ↓ DELAY_GEMINI delay
+callGeminiImageWithRetry — generation
   ↓
-validateGeneratedImage — taille ≥ 50 KB, ≥ 800×800
+validateGeneratedImage — size ≥ 50 KB, ≥ 800×800
   ↓
-sauvegarde locale dans generated-images/
+local save under generated-images/
 ```
 
 ---
 
-## Limitations connues
+## Known limitations
 
-- **`menus` GraphQL** : retourne `ACCESS_DENIED` même avec `read_content`.
-  Endpoint indisponible via `store execute` (nécessite App privée avec
-  `read_online_store_navigation`). `fetch-store-data.js` écrit un stub.
-- **Rate limit Gemini** : 10 req/min en tier gratuit. Délai
-  `DELAY_GEMINI=6500` ms entre appels. Sur 429 : retry après 60 s (max 3).
-- **`productReorderMedia`** : mutation **asynchrone**. Retourne un Job ID,
-  pas un résultat immédiat — `store execute` ne suit pas le job.
-- **Port 13387 occupé** lors de `shopify store auth` :
+- **`menus` GraphQL**: returns `ACCESS_DENIED` even with `read_content`.
+  The endpoint is not available through `store execute` (it requires a
+  private App with `read_online_store_navigation`).
+  `fetch-store-data.js` writes a stub.
+- **Gemini rate limit**: 10 req/min on the free tier. Use
+  `DELAY_GEMINI=6500` ms between calls. On 429: automatic retry after
+  60 s (max 3).
+- **`productReorderMedia`**: **asynchronous** mutation. Returns a Job
+  ID, not an immediate result — `store execute` does not follow the job.
+- **Port 13387 in use** during `shopify store auth`:
   ```powershell
   netstat -ano | findstr ':13387'
   Stop-Process -Id <PID> -Force
@@ -180,14 +184,14 @@ sauvegarde locale dans generated-images/
 
 ---
 
-## Réutilisabilité
+## Reusability
 
-Pour adapter le toolkit à une nouvelle boutique :
+To adapt the toolkit to a new store:
 
-1. Copier `.env.example` → `.env`
-2. Remplir `SHOPIFY_STORE`, `SHOP_BRAND_NAME`, `SHOP_BRAND_VOCABULARY`,
-   `SHOP_LIVRAISON_HTML`, `GEMINI_API_KEY`
-3. `shopify store auth ...` (scopes au-dessus)
+1. Copy `.env.example` → `.env`
+2. Fill in `SHOPIFY_STORE`, `SHOP_BRAND_NAME`, `SHOP_BRAND_VOCABULARY`,
+   `SHOP_SHIPPING_HTML`, `GEMINI_API_KEY`
+3. `shopify store auth ...` (scopes above)
 4. `node fetch-store-data.js`
 
-Aucun changement de code requis pour changer de boutique.
+No code change required to switch stores.

@@ -1,31 +1,31 @@
-# Exemple — Audit des produits avec moins de 3 images
+# Example — Audit products with fewer than 3 images
 
-**Date** : 2026-01-15
-**Script utilisé** : `audit/audit.js`
-**Fichiers de référence lus** : `store-data/products.md`
+**Date**: 2026-01-15
+**Script used**: `audit/audit.js`
+**Reference files read**: `store-data/products.md`
 
-## Cible
+## Target
 
-- **Scope** : products
-- **Filtre** : status ACTIVE, images < 3
-- **Nb entités concernées** : 0 (à recalculer)
+- **Scope**: products
+- **Filter**: status ACTIVE, images < 3
+- **Entities affected**: 0 (recomputed)
 
 ## Action
 
-- **Type** : audit
-- **Champ modifié** : —
-- **Valeur** : —
+- **Type**: audit
+- **Field**: —
+- **Value**: —
 
-## Validation avant application
+## Validation
 
-- [x] Vérifier que les entités cibles sont bien dans `store-data/products.md`
-- [ ] Afficher les changements prévus avant d'appliquer (non applicable, audit)
-- [ ] Demander confirmation `o/N` avant la mutation (non applicable, audit)
+- [x] Verify target entities are in `store-data/products.md`
+- [ ] Show planned changes (dry-run) — not applicable for audit
+- [ ] Ask confirmation y/N before mutation — not applicable for audit
 
-## Critères de succès
+## Success criteria
 
-- Liste exhaustive des produits actifs avec moins de 3 images
-- Aucune mutation Shopify déclenchée
-- Permet de planifier une tâche `images/image-generate.js` ou un shooting photo
+- Exhaustive list of active products with fewer than 3 images
+- No Shopify mutation triggered
+- Lets you plan an `images/image-generate.js` task or a photo shoot
 
-## Résultats
+## Results

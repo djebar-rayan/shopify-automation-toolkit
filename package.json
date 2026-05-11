@@ -1,7 +1,7 @@
 {
   "name": "shopify-automation-toolkit",
   "version": "1.0.0",
-  "description": "Toolkit Node.js réutilisable pour automatiser l'audit, le SEO, le contenu et la gestion des images d'une boutique Shopify, piloté par fichiers de tâche et alimenté par Gemini.",
+  "description": "Reusable Node.js toolkit to automate audits, SEO, content and image workflows for a Shopify store, driven by Markdown task files and powered by Gemini.",
   "main": "fetch-store-data.js",
   "scripts": {
     "fetch": "node fetch-store-data.js",

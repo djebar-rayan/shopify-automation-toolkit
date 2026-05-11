@@ -1,21 +1,21 @@
 'use strict';
 
 // ============================================================
-// content/update-products.js — Mise à jour générique des produits
+// content/update-products.js — Generic product update
 // ------------------------------------------------------------
-// Pilotée par fichier de tâche tasks/<task>.md.
-// Champs supportés (case-insensitive) :
+// Driven by a task file tasks/<task>.md.
+// Supported fields (case-insensitive):
 //   - descriptionHtml | description
 //   - seo.title       | seo_title
 //   - seo.description | seo_description
 //   - tags
 //   - handle
 //   - status
-// La valeur peut être :
-//   - littérale (HTML, texte, liste de tags séparés par virgule)
-//   - « générer via Gemini avec ce prompt : … » → callGeminiText
+// The value can be:
+//   - a literal (HTML, text, comma-separated tag list)
+//   - "generate via Gemini with this prompt: …" → callGeminiText
 //
-// Usage : node content/update-products.js --task tasks/<file>.md [--yes]
+// Usage: node content/update-products.js --task tasks/<file>.md [--yes]
 // ============================================================
 
 const path = require('path');
@@ -40,39 +40,41 @@ const FIELD_MAP = {
   'status':           'status',
 };
 
+const GEMINI_PREFIX = /^generate via gemini with this prompt\s*:/i;
+
 async function main() {
   const taskPath = getFlag('task');
-  if (!taskPath) { console.error('❌  --task <fichier.md> requis'); process.exit(1); }
+  if (!taskPath) { console.error('❌  --task <file.md> is required'); process.exit(1); }
   const abs = path.isAbsolute(taskPath) ? taskPath : path.join(process.cwd(), taskPath);
   const task = parseTaskFile(abs);
 
-  if (task.cible.scope !== 'products') {
-    console.error(`❌  Ce script gère scope=products, reçu : ${task.cible.scope}`);
+  if (task.target.scope !== 'products') {
+    console.error(`❌  This script handles scope=products, got: ${task.target.scope}`);
     process.exit(1);
   }
   if (task.action.type !== 'update') {
-    console.error(`❌  Ce script gère type=update, reçu : ${task.action.type}`);
+    console.error(`❌  This script handles type=update, got: ${task.action.type}`);
     process.exit(1);
   }
 
   const fieldKey = FIELD_MAP[(task.action.field || '').toLowerCase()];
   if (!fieldKey) {
-    console.error(`❌  Champ non supporté : ${task.action.field}. Valides : ${Object.keys(FIELD_MAP).join(', ')}`);
+    console.error(`❌  Unsupported field: ${task.action.field}. Valid: ${Object.keys(FIELD_MAP).join(', ')}`);
     process.exit(1);
   }
 
   console.log(`\n━━━ update-products ━━━`);
-  console.log(`  Tâche  : ${task.name}`);
-  console.log(`  Filtre : ${task.cible.filter}`);
-  console.log(`  Champ  : ${task.action.field} → ${fieldKey}`);
-  console.log(`  Valeur : ${task.action.value.slice(0, 80)}${task.action.value.length > 80 ? '…' : ''}\n`);
+  console.log(`  Task   : ${task.name}`);
+  console.log(`  Filter : ${task.target.filter}`);
+  console.log(`  Field  : ${task.action.field} → ${fieldKey}`);
+  console.log(`  Value  : ${task.action.value.slice(0, 80)}${task.action.value.length > 80 ? '…' : ''}\n`);
 
   const blocks = parseStoreDataBlocks('products.md');
-  const matched = applyFilter(blocks, task.cible.filter);
-  if (!matched.length) { console.log('  Aucune cible. Arrêt.'); return; }
-  console.log(`  ${matched.length}/${blocks.length} produits ciblés.`);
+  const matched = applyFilter(blocks, task.target.filter);
+  if (!matched.length) { console.log('  No target. Stopping.'); return; }
+  console.log(`  ${matched.length}/${blocks.length} products targeted.`);
 
-  const useGemini = /^générer via gemini avec ce prompt\s*:/i.test(task.action.value);
+  const useGemini = GEMINI_PREFIX.test(task.action.value);
   const geminiPrompt = useGemini ? task.action.value.replace(/^[^:]*:\s*/i, '') : null;
 
   const plan = [];
@@ -85,42 +87,42 @@ async function main() {
         const fullPrompt = [
           geminiPrompt,
           '',
-          `Produit : ${b.title}`,
-          `Type : ${b.productType || ''}`,
-          `Vendor : ${b.vendor || ''}`,
-          `Tags : ${b.tags.join(', ')}`,
+          `Product: ${b.title}`,
+          `Type: ${b.productType || ''}`,
+          `Vendor: ${b.vendor || ''}`,
+          `Tags: ${b.tags.join(', ')}`,
           '',
-          'Rends UNIQUEMENT le contenu HTML (ou texte selon le champ), sans préambule, sans triples backticks.',
+          'Return ONLY the HTML content (or text depending on the field), without preamble, without triple backticks.',
         ].join('\n');
         newValue = await callGeminiTextWithRetry(fullPrompt);
         console.log(` ✓ Gemini ${newValue.length}c`);
         await sleep(config.DELAY_GEMINI);
       } catch (e) {
-        console.log(` ❌ Gemini : ${e.message.slice(0, 80)}`);
+        console.log(` ❌ Gemini: ${e.message.slice(0, 80)}`);
         continue;
       }
     } else {
-      console.log(' (valeur littérale)');
+      console.log(' (literal value)');
     }
     plan.push({ block: b, newValue });
   }
 
   if (task.validation.showDryRun) {
-    console.log('\n  Préview (3 premières cibles) :');
+    console.log('\n  Preview (first 3 targets):');
     for (const item of plan.slice(0, 3)) {
       console.log('  ──────────────────────────────────────────────');
       console.log(`  ${item.block.handle}`);
-      console.log(`  Nouvelle valeur (200c) : ${item.newValue.slice(0, 200)}${item.newValue.length > 200 ? '…' : ''}`);
+      console.log(`  New value (200c): ${item.newValue.slice(0, 200)}${item.newValue.length > 200 ? '…' : ''}`);
     }
-    if (plan.length > 3) console.log(`  … (+${plan.length - 3} produits)`);
+    if (plan.length > 3) console.log(`  … (+${plan.length - 3} products)`);
   }
 
   if (task.validation.askConfirm) {
-    const ok = await confirm(`\n  Appliquer sur ${plan.length} produit(s) ?`, true);
-    if (!ok) { console.log('  Annulé par l\'utilisateur.'); return; }
+    const ok = await confirm(`\n  Apply to ${plan.length} product(s)?`, true);
+    if (!ok) { console.log('  Cancelled by user.'); return; }
   }
 
-  console.log('\n  Application...');
+  console.log('\n  Applying...');
   const MUTATION = `
     mutation Upd($input: ProductInput!) {
       productUpdate(input: $input) {
@@ -152,17 +154,17 @@ async function main() {
     await sleep(config.DELAY_SHOPIFY);
   }
 
-  console.log(`\n  Résultat : ${ok} ok, ${errors} erreur(s).`);
+  console.log(`\n  Result: ${ok} ok, ${errors} error(s).`);
 
   appendTaskResult(task.path, [
-    `Entités ciblées : ${plan.length}`,
-    `Entités modifiées : ${ok}`,
-    `Erreurs : ${errors}`,
-    `Champ modifié : ${task.action.field}`,
-    `Re-fetch recommandé : node fetch-store-data.js`,
+    `Targeted entities: ${plan.length}`,
+    `Modified entities: ${ok}`,
+    `Errors: ${errors}`,
+    `Field modified: ${task.action.field}`,
+    `Re-fetch recommended: node fetch-store-data.js`,
   ]);
-  console.log(`  ✓ Résultats appendés à ${path.basename(task.path)}`);
-  console.log('\n━━━ Fin update-products ━━━\n');
+  console.log(`  ✓ Results appended to ${path.basename(task.path)}`);
+  console.log('\n━━━ End update-products ━━━\n');
 }
 
 main().catch(e => { console.error('FATAL:', e.message); if (e.stack) console.error(e.stack); process.exit(1); });

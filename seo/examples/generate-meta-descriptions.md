@@ -1,25 +1,25 @@
-# Génération de meta descriptions SEO
+# Generate SEO meta descriptions
 
-## Cible
+## Target
 
-- **Scope** : products
-- **Filtre** : status ACTIVE, seo_description manquant
-- **Nb entités concernées** : 0
+- **Scope**: products
+- **Filter**: status ACTIVE, seo_description missing
+- **Entities affected**: 0
 
 ## Action
 
-- **Type** : update
-- **Champ modifié** : seo.description
-- **Valeur** : générer via Gemini avec ce prompt : "Rédige une meta description SEO pour ce produit, entre 80 et 160 caractères, format incitatif avec un call-to-action léger. Pas de Markdown."
+- **Type**: update
+- **Field**: seo.description
+- **Value**: generate via Gemini with this prompt: "Write an SEO meta description for this product, between 80 and 160 characters, in a compelling style with a light call-to-action. No Markdown."
 
-## Validation avant application
+## Validation
 
-- [x] Vérifier que les entités cibles sont bien dans `store-data/products.md`
-- [x] Afficher les changements prévus avant d'appliquer
-- [x] Demander confirmation `o/N` avant la mutation
+- [x] Verify target entities are in `store-data/products.md`
+- [x] Show planned changes (dry-run)
+- [x] Ask confirmation y/N before mutation
 
-## Critères de succès
+## Success criteria
 
-- 100 % des produits filtrés ont une meta description SEO ≤ 160 caractères
+- 100% of filtered products have an SEO meta description ≤ 160 characters
 
-## Résultats
+## Results

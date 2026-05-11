@@ -1,86 +1,87 @@
-# Troubleshooting — FAQ et erreurs courantes
+# Troubleshooting — FAQ and common errors
 
-## "SHOPIFY_STORE manquant dans .env"
+## "SHOPIFY_STORE missing in .env"
 
-→ Copier `.env.example` en `.env` et remplir au minimum `SHOPIFY_STORE`.
+→ Copy `.env.example` to `.env` and fill at least `SHOPIFY_STORE`.
 
 ```bash
 cp .env.example .env
 ```
 
-## "store-data/products.md introuvable"
+## "store-data/products.md not found"
 
-→ Lancer d'abord `node fetch-store-data.js`. Tous les scripts génériques
-lisent depuis `store-data/`, qui doit avoir été peuplé.
+→ Run `node fetch-store-data.js` first. Every generic script reads
+from `store-data/`, which must have been populated.
 
-## La commande quitte avec exit code 1 sans message
+## The command exits with code 1 without any message
 
-→ Probablement `stdio: 'pipe'` au lieu de `'inherit'` dans un fork de
-`execGql`. Cf. **Règle 2** de `CLAUDE.md`. Tous les scripts du toolkit
-respectent cette règle.
+→ Likely `stdio: 'pipe'` instead of `'inherit'` in a fork of
+`execGql`. See **Rule 2** in `CLAUDE.md`. All toolkit scripts comply.
 
 ## "Cannot find module ./shop-config"
 
-→ Imports legacy. Le toolkit utilise `./lib/config` partout. Vérifier que
-les imports relatifs sont corrects après une refonte locale.
+→ Legacy imports. The toolkit uses `./lib/config` everywhere. Make
+sure relative imports are correct after a local refactor.
 
-## La query retourne `undefined` partout
+## The query returns `undefined` everywhere
 
-→ Vous accédez à `res.data.products.edges` au lieu de `res.products.edges`.
-Le Shopify CLI **n'a pas d'enveloppe `.data`**. Cf. **Règle 3** de `CLAUDE.md`.
+→ You are accessing `res.data.products.edges` instead of
+`res.products.edges`. The Shopify CLI **has no `.data` envelope**.
+See **Rule 3** in `CLAUDE.md`.
 
-## "Gemini Text 429" en boucle
+## "Gemini Text 429" in a loop
 
-→ Rate limit du tier gratuit (10 req/min). Le toolkit retry automatiquement
-après 60 s, jusqu'à 3 fois. Si ça persiste :
-- baisser le volume de la tâche (filtre plus restrictif)
-- attendre quelques minutes
-- passer au tier payant
+→ Free-tier rate limit (10 req/min). The toolkit automatically retries
+after 60 s, up to 3 times. If it persists:
+- Reduce the task volume (tighter filter)
+- Wait a few minutes
+- Upgrade to the paid tier
 
-## "blockReason: OTHER" en générant du texte avec Gemini
+## "blockReason: OTHER" when generating text with Gemini
 
-→ Vous utilisez `GEMINI_MODEL` (Flash Image) pour du texte. Utiliser
-`GEMINI_TEXT_MODEL`. Cf. `lib/gemini-text.js` (déjà bon par défaut).
+→ You are using `GEMINI_MODEL` (Flash Image) for text. Use
+`GEMINI_TEXT_MODEL`. See `lib/gemini-text.js` (already correct).
 
-## Image générée rejetée pour "Trop petite (XX KB < 50KB)"
+## Generated image rejected with "Too small (XX KB < 50KB)"
 
-→ Le prompt ne demande pas une qualité suffisante. Ajouter "qualité 4K",
-"haute résolution", "détails nets", et passer en `--mode=multi-variant`
-avec une image de référence si possible.
+→ The prompt doesn't ask for enough quality. Add "4K quality",
+"high resolution", "sharp details" and switch to `--mode=multi-variant`
+with a reference image if possible.
 
-## "Résolution trop basse (300×400)"
+## "Resolution too low (300×400)"
 
-→ Idem. Gemini Flash Image génère parfois des images carrées 1024×1024
-mais peut produire des miniatures sur certains prompts vagues. Forcer la
-résolution dans le prompt : "image carrée 4K, 4096×4096 pixels".
+→ Same. Gemini Flash Image often returns square 1024×1024 images but
+may produce thumbnails on vague prompts. Force the resolution in the
+prompt: "square 4K image, 4096×4096 pixels".
 
-## "stagedUploadsCreate échoué"
+## "stagedUploadsCreate failed"
 
-→ Vérifier le scope `write_files`. Cf. `docs/SHOPIFY_AUTH.md`.
+→ Check the `write_files` scope. See `docs/SHOPIFY_AUTH.md`.
 
-## "ACCESS_DENIED sur menus"
+## "ACCESS_DENIED on menus"
 
-→ `menus` GraphQL nécessite une App privée avec `read_online_store_navigation`.
-`fetch-store-data.js` écrit un stub honnête dans `store-data/navigation.md`.
-Documenter manuellement la structure du menu si besoin.
+→ The `menus` GraphQL query requires a private App with
+`read_online_store_navigation`. `fetch-store-data.js` writes an honest
+stub in `store-data/navigation.md`. Document the menu manually if
+needed.
 
-## Encodage cassé (caractères accentués)
+## Broken encoding (accented characters)
 
-→ Sur Windows, vérifier que la console est en UTF-8 :
+→ On Windows, make sure the console is set to UTF-8:
 ```powershell
 chcp 65001
 ```
 
 ## "shopify-cli not found"
 
-→ Installer Shopify CLI : <https://shopify.dev/docs/api/shopify-cli/install>
+→ Install Shopify CLI: <https://shopify.dev/docs/api/shopify-cli/install>
 
-## La tâche s'exécute mais rien ne se passe
+## The task runs but nothing happens
 
-→ Vérifier que :
-1. Le scope est cohérent avec le script (`scope=products` pour
+→ Check that:
+1. The scope is consistent with the script (`scope=products` for
    `content/update-products.js`).
-2. Le filtre matche bien des entités (lancer `audit/audit.js --task <task>`
-   d'abord pour vérifier).
-3. La case "Demander confirmation" n'est pas cochée si vous attendez une
-   exécution non interactive (passer `--yes`).
+2. The filter actually matches some entities (run `audit/audit.js
+   --task <task>` first to verify).
+3. The "Ask confirmation" box isn't ticked if you expect a non-interactive
+   run (pass `--yes`).

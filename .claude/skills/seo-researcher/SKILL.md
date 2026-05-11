@@ -1,120 +1,121 @@
 ---
 name: seo-researcher
-description: Effectue une recherche de mots-clés SEO approfondie via WebSearch pour identifier les termes à fort volume/faible concurrence dans une niche donnée, et produit une liste de mots-clés priorisés avec intentions de recherche. Use when the user needs keyword research, wants to find SEO opportunities, identify content gaps, or build a keyword strategy for any niche or product category.
+description: Performs in-depth SEO keyword research via WebSearch to identify high-volume/low-competition terms in a given niche, and produces a prioritized keyword list with search intents. Use when the user needs keyword research, wants to find SEO opportunities, identify content gaps, or build a keyword strategy for any niche or product category.
 ---
 
 # SEO Researcher
 
-Recherche de mots-clés structurée via WebSearch pour identifier les opportunités SEO
-à fort potentiel pour une boutique e-commerce. La niche et les seeds sont **paramètres**
-(lus dans `.env` via `SHOP_BRAND_NAME`/`SHOP_BRAND_VOCABULARY` ou demandés à l'utilisateur).
+Structured keyword research via WebSearch to identify high-potential
+SEO opportunities for an e-commerce store. The niche and seeds are
+**parameters** (read from `.env` via
+`SHOP_BRAND_NAME`/`SHOP_BRAND_VOCABULARY` or asked from the user).
 
 ## Instructions
 
-### Étape 1 — Définir la niche et les seeds
+### Step 1 — Define the niche and seeds
 
-Demander à l'utilisateur (ou déduire de `.env`) :
+Ask the user (or derive from `.env`):
 
-- **Niche** : ex. « cosmétiques bio », « accessoires running », …
-- **Langue cible** : français (principal), anglais (secondaire)
-- **Zone géo** : France, Belgique, Suisse, …
-- **Type de contenu** : pages produit, collections, blog, landing
+- **Niche**: e.g. "organic cosmetics", "running accessories", …
+- **Target language**: English (primary), French (secondary)
+- **Geographic zone**: US, UK, France, …
+- **Content type**: product pages, collections, blog, landing pages
 
-Préparer une liste de **seeds** (5-10 mots-clés racines) à partir du vocabulaire
-de marque ou des principaux types de produits.
+Prepare a list of **seeds** (5–10 root keywords) drawn from the brand
+vocabulary or the main product types.
 
-### Étape 2 — Expansion sémantique via WebSearch
+### Step 2 — Semantic expansion via WebSearch
 
-Pour chaque seed, rechercher les variantes et questions associées :
+For each seed, search variants and related questions:
 
 ```
-"<seed>" signification histoire
-"<seed>" cadeau idée
-"<seed>" femme homme enfant
-"<seed>" argent or matériau
+"<seed>" meaning history
+"<seed>" gift idea
+"<seed>" women men kids
+"<seed>" material
 ```
 
-Et les **questions fréquentes** :
+And the **common questions**:
 
 ```
 site:quora.com OR site:reddit.com "<seed>"
-"comment choisir" "<seed>"
-"quel <type>" "<seed>" critères
+"how to choose" "<seed>"
+"which <type>" "<seed>" criteria
 ```
 
-### Étape 3 — Classer par intention
+### Step 3 — Classify by intent
 
-| Intention | Description | Exemples |
+| Intent | Description | Examples |
 |---|---|---|
-| Transactionnelle | Achat immédiat | « acheter X », « X prix » |
-| Navigationnelle | Cherche une marque | « <brand> X » |
-| Informationnelle | Veut apprendre | « signification X », « histoire X » |
-| Commerciale | Compare avant achat | « meilleur X », « X avis » |
+| Transactional | Immediate buy | "buy X", "X price" |
+| Navigational | Looking for a brand | "<brand> X" |
+| Informational | Wants to learn | "X meaning", "X history" |
+| Commercial | Compares before buying | "best X", "X review" |
 
-Prioriser : **Transactionnelle > Commerciale > Informationnelle**.
+Prioritize: **Transactional > Commercial > Informational**.
 
-### Étape 4 — Estimer la concurrence via SERPs
+### Step 4 — Estimate competition via SERPs
 
-Pour les 20 mots-clés les plus prometteurs :
-
-```
-"<mot-clé>" -site:wikipedia.org
-"<mot-clé>" boutique <zone>
-"<mot-clé>" <année courante>
-```
-
-Évaluer :
-
-- Nombre de boutiques e-commerce dans les 10 premiers
-- Présence de gros sites (Amazon, Etsy) = forte concurrence
-- Présence de petites boutiques artisanales = opportunité
-
-### Étape 5 — Matrice de priorisation
+For the 20 most promising keywords:
 
 ```
-Haute priorité : Volume fort + Difficulté faible
-Opportunité    : Volume moyen + Difficulté faible
-Long terme     : Volume fort + Difficulté forte
-Éviter         : Volume faible + Difficulté forte
+"<keyword>" -site:wikipedia.org
+"<keyword>" store <region>
+"<keyword>" <current year>
 ```
 
-### Étape 6 — Longue traîne
+Assess:
 
-Identifier les phrases de 4+ mots à fort taux de conversion :
+- Number of e-commerce stores in the top 10
+- Presence of giants (Amazon, Etsy) = high competition
+- Presence of small artisan stores = opportunity
+
+### Step 5 — Prioritization matrix
 
 ```
-"<type produit> <attribut spécifique> <occasion>"
-"<produit> <matériau> <cible>"
+High priority : High volume + Low difficulty
+Opportunity   : Medium volume + Low difficulty
+Long term     : High volume + High difficulty
+Avoid         : Low volume + High difficulty
 ```
 
-### Étape 7 — Rapport
+### Step 6 — Long-tail
 
-Générer `keyword-research.md` à la racine du repo :
+Find 4+ word phrases with high conversion intent:
+
+```
+"<product type> <specific attribute> <occasion>"
+"<product> <material> <audience>"
+```
+
+### Step 7 — Report
+
+Generate `keyword-research.md` at the repo root:
 
 ```markdown
-# Recherche de mots-clés — <niche>
-**Date** : YYYY-MM-DD
+# Keyword research — <niche>
+**Date**: YYYY-MM-DD
 
-## Top 20 mots-clés prioritaires
-| Mot-clé | Intention | Priorité | Utilisable dans |
+## Top 20 priority keywords
+| Keyword | Intent | Priority | Use in |
 |---|---|---|---|
-| … | Transac. | P1 | meta title, collection |
+| … | Trans. | P1 | meta title, collection |
 
-## Mots-clés longue traîne
+## Long-tail keywords
 …
 
-## Opportunités blog
+## Blog opportunities
 …
 
-## Mots-clés à éviter (trop compétitifs)
+## Keywords to avoid (too competitive)
 …
 ```
 
-### Étape 8 — Mapping aux pages existantes
+### Step 8 — Map to existing pages
 
-Pour chaque mot-clé prioritaire, proposer où l'intégrer :
+For each priority keyword, propose where to integrate it:
 
-- Meta title d'une page produit existante (cf. `seo/seo-update.js`)
-- Titre / description d'une collection (cf. `content/update-collections.js`)
-- Sujet d'un article de blog à créer
-- Description de page CMS (cf. `content/update-pages.js`)
+- Existing product meta title (see `seo/seo-update.js`)
+- Collection title / description (see `content/update-collections.js`)
+- Blog post topic to create
+- CMS page description (see `content/update-pages.js`)

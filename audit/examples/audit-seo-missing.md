@@ -1,29 +1,29 @@
-# Audit — Produits avec meta SEO manquant
+# Audit — Products with missing SEO meta
 
-**Script utilisé** : `audit/audit.js`
-**Fichiers de référence lus** : `store-data/products.md`
+**Script used**: `audit/audit.js`
+**Reference files read**: `store-data/products.md`
 
-## Cible
+## Target
 
-- **Scope** : products
-- **Filtre** : status ACTIVE, seo_title manquant
-- **Nb entités concernées** : 0
+- **Scope**: products
+- **Filter**: status ACTIVE, seo_title missing
+- **Entities affected**: 0
 
 ## Action
 
-- **Type** : audit
-- **Champ modifié** : —
-- **Valeur** : —
+- **Type**: audit
+- **Field**: —
+- **Value**: —
 
-## Validation avant application
+## Validation
 
-- [x] Vérifier que les entités cibles sont bien dans `store-data/products.md`
-- [ ] Afficher les changements prévus avant d'appliquer
-- [ ] Demander confirmation `o/N` avant la mutation
+- [x] Verify target entities are in `store-data/products.md`
+- [ ] Show planned changes (dry-run)
+- [ ] Ask confirmation y/N before mutation
 
-## Critères de succès
+## Success criteria
 
-- Liste exhaustive des produits sans meta title SEO
-- Permet de préparer une tâche `seo/seo-update.js`
+- Exhaustive list of products without an SEO meta title
+- Lets you prepare a `seo/seo-update.js` task
 
-## Résultats
+## Results

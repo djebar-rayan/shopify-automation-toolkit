@@ -1,71 +1,71 @@
-# Skills Claude Code
+# Claude Code skills
 
-Le toolkit fournit 8 **skills** dans `.claude/skills/` pour utilisateurs de
-[Claude Code](https://claude.com/claude-code). Une skill se déclenche
-automatiquement quand son `description` matche le contexte, ou
-manuellement via `/<nom-skill>`.
+The toolkit ships 8 **skills** under `.claude/skills/` for users of
+[Claude Code](https://claude.com/claude-code). A skill activates
+automatically when its `description` matches the context, or
+manually via `/<skill-name>`.
 
-## Skills fournis
+## Provided skills
 
-| Skill | Déclenche quand |
+| Skill | Triggers when |
 |---|---|
-| `shopify-seo-writer` | Produits avec `seo_title_missing` ou `seo_desc_missing` ; demande de générer des meta SEO |
-| `shopify-content-enricher` | Produits avec `desc_missing`, `desc_too_short`, `desc_no_html` ; demande d'enrichissement de description |
-| `shopify-image-generator` | Produits avec `image_count_low` ; demande de régénérer des photos via IA |
-| `shopify-liquid-analyzer` | Audit du thème Liquid actif, Core Web Vitals, accessibilité |
-| `shopify-competitor-spy` | Analyse concurrentielle d'une niche e-commerce |
-| `seo-researcher` | Recherche de mots-clés SEO via WebSearch |
-| `prompt-optimizer` | Optimisation de requêtes GraphQL Shopify ou de prompts Claude |
-| `recurring-monitor` | Configuration d'un audit récurrent (hebdomadaire/mensuel) avec cron ou n8n |
+| `shopify-seo-writer` | Products with `seo_title_missing` or `seo_desc_missing`; request to generate SEO meta |
+| `shopify-content-enricher` | Products with `desc_missing`, `desc_too_short`, `desc_no_html`; request to enrich descriptions |
+| `shopify-image-generator` | Products with `image_count_low`; request to regenerate photos through AI |
+| `shopify-liquid-analyzer` | Audit the active Liquid theme, Core Web Vitals, accessibility |
+| `shopify-competitor-spy` | Competitive analysis of an e-commerce niche |
+| `seo-researcher` | SEO keyword research via WebSearch |
+| `prompt-optimizer` | Optimize Shopify GraphQL queries or Claude prompts |
+| `recurring-monitor` | Set up a recurring audit (weekly/monthly) with cron or n8n |
 
-## Installation côté utilisateur Claude Code
+## Install on the Claude Code side
 
-### Option 1 — Skills locales au repo (recommandé)
+### Option 1 — Repo-local skills (recommended)
 
-Si vous utilisez Claude Code et que ce repo est ouvert, les skills dans
-`.claude/skills/` sont **automatiquement chargées**.
+If you use Claude Code with this repo open, the skills under
+`.claude/skills/` are **loaded automatically**.
 
-### Option 2 — Skills globales (toutes vos sessions Claude Code)
+### Option 2 — Global skills (across all your sessions)
 
-Copier les skills vers votre dossier global :
+Copy the skills into your global folder:
 
-**Windows / PowerShell** :
+**Windows / PowerShell**:
 ```powershell
 Copy-Item -Recurse .claude\skills\* "$env:USERPROFILE\.claude\skills\"
 ```
 
-**macOS / Linux** :
+**macOS / Linux**:
 ```bash
 cp -r .claude/skills/* ~/.claude/skills/
 ```
 
-## Désactiver une skill localement
+## Disable a skill locally
 
-Renommer son dossier en ajoutant un underscore :
+Rename its folder by prefixing an underscore:
 
 ```bash
 mv .claude/skills/shopify-image-generator .claude/skills/_shopify-image-generator
 ```
 
-## Créer ses propres skills
+## Create your own skills
 
-Voir la doc Claude Code : <https://claude.com/claude-code/skills>
+See the Claude Code docs: <https://claude.com/claude-code/skills>
 
-Le format minimum est :
+The minimal format is:
 
 ```markdown
 ---
-name: ma-skill
-description: Quand cette skill se déclenche (1-2 phrases) ; les mots-clés ici servent au matching automatique.
+name: my-skill
+description: When this skill activates (1–2 sentences); the keywords here drive automatic matching.
 ---
 
-# Ma Skill
+# My Skill
 
-Instructions étape par étape pour Claude.
+Step-by-step instructions for Claude.
 ```
 
-## Tester sans Claude Code
+## Use without Claude Code
 
-Les skills sont **rédigées en Markdown** et restent lisibles comme documentation
-hors-Claude-Code. Vous pouvez les utiliser comme cheat-sheets ou comme prompts
-système pour d'autres LLM.
+The skills are **plain Markdown** and remain readable as documentation
+outside Claude Code. You can use them as cheat-sheets or system prompts
+for other LLMs.

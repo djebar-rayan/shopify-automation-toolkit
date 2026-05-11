@@ -1,9 +1,9 @@
 'use strict';
 
 // ============================================================
-// content/update-pages.js — Mise à jour des pages CMS
+// content/update-pages.js — Generic CMS page update
 // ------------------------------------------------------------
-// Champs supportés : body, seo.title, seo.description, handle, title.
+// Supported fields: body, seo.title, seo.description, handle, title.
 // ============================================================
 
 const path = require('path');
@@ -27,25 +27,27 @@ const FIELD_MAP = {
   'title':           'title',
 };
 
+const GEMINI_PREFIX = /^generate via gemini with this prompt\s*:/i;
+
 async function main() {
   const taskPath = getFlag('task');
-  if (!taskPath) { console.error('❌  --task requis'); process.exit(1); }
+  if (!taskPath) { console.error('❌  --task is required'); process.exit(1); }
   const task = parseTaskFile(path.isAbsolute(taskPath) ? taskPath : path.join(process.cwd(), taskPath));
 
-  if (task.cible.scope !== 'pages') { console.error(`❌  scope=pages requis`); process.exit(1); }
-  if (task.action.type !== 'update') { console.error(`❌  type=update requis`); process.exit(1); }
+  if (task.target.scope !== 'pages') { console.error(`❌  scope=pages required`); process.exit(1); }
+  if (task.action.type !== 'update') { console.error(`❌  type=update required`); process.exit(1); }
 
   const fieldKey = FIELD_MAP[(task.action.field || '').toLowerCase()];
-  if (!fieldKey) { console.error(`❌  Champ non supporté : ${task.action.field}`); process.exit(1); }
+  if (!fieldKey) { console.error(`❌  Unsupported field: ${task.action.field}`); process.exit(1); }
 
   console.log(`\n━━━ update-pages ━━━`);
-  console.log(`  Tâche : ${task.name}\n  Filtre : ${task.cible.filter}\n  Champ : ${task.action.field}\n`);
+  console.log(`  Task: ${task.name}\n  Filter: ${task.target.filter}\n  Field: ${task.action.field}\n`);
 
   const blocks = parseStoreDataBlocks('pages.md');
-  const matched = applyFilter(blocks, task.cible.filter);
-  if (!matched.length) { console.log('  Aucune cible.'); return; }
+  const matched = applyFilter(blocks, task.target.filter);
+  if (!matched.length) { console.log('  No target.'); return; }
 
-  const useGemini = /^générer via gemini avec ce prompt\s*:/i.test(task.action.value);
+  const useGemini = GEMINI_PREFIX.test(task.action.value);
   const geminiPrompt = useGemini ? task.action.value.replace(/^[^:]*:\s*/i, '') : null;
 
   const plan = [];
@@ -56,21 +58,21 @@ async function main() {
     if (useGemini) {
       try {
         newValue = await callGeminiTextWithRetry(
-          [geminiPrompt, '', `Page : ${b.title}`, '', 'Rends UNIQUEMENT le contenu HTML, sans préambule.'].join('\n')
+          [geminiPrompt, '', `Page: ${b.title}`, '', 'Return ONLY the HTML content, without preamble.'].join('\n')
         );
         console.log(` ✓ Gemini ${newValue.length}c`);
         await sleep(config.DELAY_GEMINI);
       } catch (e) { console.log(` ❌ ${e.message.slice(0, 80)}`); continue; }
-    } else { console.log(' (littéral)'); }
+    } else { console.log(' (literal)'); }
     plan.push({ block: b, newValue });
   }
 
   if (task.validation.showDryRun) {
-    console.log('\n  Préview :');
+    console.log('\n  Preview:');
     for (const item of plan.slice(0, 2)) console.log(`  ${item.block.handle} → ${item.newValue.slice(0, 150)}…`);
   }
   if (task.validation.askConfirm) {
-    if (!await confirm(`\n  Appliquer sur ${plan.length} page(s) ?`, true)) { console.log('  Annulé.'); return; }
+    if (!await confirm(`\n  Apply to ${plan.length} page(s)?`, true)) { console.log('  Cancelled.'); return; }
   }
 
   const MUTATION = `
@@ -98,13 +100,13 @@ async function main() {
     await sleep(config.DELAY_SHOPIFY);
   }
 
-  console.log(`\n  ${ok} ok, ${errors} erreur(s)`);
+  console.log(`\n  ${ok} ok, ${errors} error(s)`);
   appendTaskResult(task.path, [
-    `Entités ciblées : ${plan.length}`,
-    `Entités modifiées : ${ok}`,
-    `Erreurs : ${errors}`,
+    `Targeted entities: ${plan.length}`,
+    `Modified entities: ${ok}`,
+    `Errors: ${errors}`,
   ]);
-  console.log('\n━━━ Fin update-pages ━━━\n');
+  console.log('\n━━━ End update-pages ━━━\n');
 }
 
 main().catch(e => { console.error('FATAL:', e.message); process.exit(1); });

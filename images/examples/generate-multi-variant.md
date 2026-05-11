@@ -1,56 +1,56 @@
-# Génération d'images multi-variantes (référence + variante)
+# Multi-variant image generation (reference + variant)
 
-> Recette **non pilotée par tâche** — utilise directement la commande dédiée.
-> Conçue pour les produits où chaque variante doit afficher un motif/design
-> commun (image canonique) appliqué sur sa propre forme/couleur.
+> Recipe **not driven by a task file** — use the dedicated command.
+> Designed for products whose variants share a common motif/design
+> applied on their own shape/colour.
 >
-> Ex. : étuis téléphone, t-shirts avec impression, mugs personnalisés.
+> Examples: phone cases, printed T-shirts, custom mugs.
 
-## Étape 1 — Générer (local, pas de mutation Shopify)
+## Step 1 — Generate (local, no Shopify mutation)
 
 ```
-node images/image-generate.js --mode=multi-variant --handle=mon-produit \
+node images/image-generate.js --mode=multi-variant --handle=my-product \
   --canonical=0 \
-  --prompt="Préserve fidèlement le motif de l'image 1 (canonique). Applique-le sur la forme et la couleur de l'image 2 (variante). Photo studio fond blanc, éclairage uniforme, qualité 4K."
+  --prompt="Faithfully preserve the motif of image 1 (canonical). Apply it to the shape and colour of image 2 (variant). Studio photo, white background, uniform lighting, 4K quality."
 ```
 
-Options utiles :
+Useful options:
 
-- `--only="iPhone 14, iPhone 15"` — n'effectue que ces variantes
-- `--skip="iPhone 11"` — saute ces variantes
-- `--canonical=2` — utiliser l'image #2 comme référence canonique
-- `--no-improve` — ne pas faire passer le prompt par Gemini Text avant
-- `--dry-run` — n'appelle pas Gemini, vérifie juste le plan
-- `--retries=5` — augmente le nombre de tentatives sur rate limit
+- `--only="iPhone 14, iPhone 15"` — only these variants
+- `--skip="iPhone 11"` — skip these variants
+- `--canonical=2` — use image #2 as the canonical reference
+- `--no-improve` — skip the Gemini Text prompt improvement
+- `--dry-run` — do not call Gemini, just check the plan
+- `--retries=5` — increase retry budget on rate-limit
 
-## Étape 2 — Validation visuelle
+## Step 2 — Visual validation
 
-Inspecter les fichiers produits dans `generated-images/` :
-
-```
-ls generated-images/mon-produit_*
-```
-
-Supprimer manuellement les images jugées non satisfaisantes.
-
-## Étape 3 — Upload + liaison aux variantes
+Inspect the files in `generated-images/`:
 
 ```
-node images/image-upload.js --handle=mon-produit --dir=generated-images \
+ls generated-images/my-product_*
+```
+
+Manually remove the images you find unsatisfactory.
+
+## Step 3 — Upload + bind to variants
+
+```
+node images/image-upload.js --handle=my-product --dir=generated-images \
   --link-variants --confirm
 ```
 
-Pour remplacer définitivement les anciennes :
+To replace the previous images definitively:
 
 ```
-node images/image-upload.js --handle=mon-produit --dir=generated-images \
+node images/image-upload.js --handle=my-product --dir=generated-images \
   --link-variants --delete-old --confirm
 ```
 
-⚠️ `--delete-old` est irréversible. Toujours valider visuellement avant.
+⚠️ `--delete-old` is irreversible. Always validate visually first.
 
-## Critères de succès
+## Success criteria
 
-- Une image par variante validée (motif fidèle + forme variante respectée)
-- Variantes liées à leur nouvelle image (`productVariantsBulkUpdate`)
-- Aucune image résiduelle non utilisée si `--delete-old`
+- One validated image per variant (faithful motif + variant shape preserved)
+- Variants bound to their new image (`productVariantsBulkUpdate`)
+- No leftover unused images if `--delete-old`

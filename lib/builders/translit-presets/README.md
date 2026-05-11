@@ -1,32 +1,32 @@
-# Presets de translittération
+# Transliteration presets
 
-Ce dossier contient des **maps JSON** pour translittérer des alphabets
-non-latins en ASCII. Chaque preset est un fichier `<nom>.json` au format :
+This folder contains **JSON maps** to transliterate non-Latin alphabets
+into ASCII. Each preset is a `<name>.json` file with the format:
 
 ```json
 {
-  "char_unicode_1": "ascii_eq_1",
-  "char_unicode_2": "ascii_eq_2"
+  "unicode_char_1": "ascii_eq_1",
+  "unicode_char_2": "ascii_eq_2"
 }
 ```
 
-## Presets fournis
+## Provided presets
 
-| Fichier | Script | Usage |
+| File | Script | Usage |
 |---|---|---|
-| `tifinagh.json` | Tifinagh / Néo-Tifinagh (Unicode 2D30–2D7F) | Boutiques publiant des contenus dans cet alphabet |
+| `tifinagh.json` | Tifinagh / Neo-Tifinagh (Unicode 2D30–2D7F) | Stores publishing content in this alphabet |
 
-## Utilisation
+## Usage
 
 ```bash
 node content/handle-normalize.js --confirm \
   --map=lib/builders/translit-presets/tifinagh.json
 ```
 
-## Ajouter un preset
+## Adding a preset
 
-1. Créer `<nom>.json` ici (ex : `cyrillic.json`).
-2. Lancer `--map=lib/builders/translit-presets/<nom>.json`.
+1. Create `<name>.json` here (e.g. `cyrillic.json`).
+2. Run `--map=lib/builders/translit-presets/<name>.json`.
 
-Les diacritiques latins (é, ç, à, ñ, ü…) sont gérés nativement par
-NFKD — pas besoin de preset.
+Latin diacritics (é, ç, à, ñ, ü…) are handled natively by NFKD — no
+preset needed.

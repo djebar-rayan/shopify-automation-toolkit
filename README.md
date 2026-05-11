@@ -6,150 +6,154 @@
 [![Powered by Gemini](https://img.shields.io/badge/AI-Gemini%203.1%20Flash-4285F4?logo=google&logoColor=white)](https://ai.google.dev/)
 [![No npm deps](https://img.shields.io/badge/dependencies-zero%20npm-success)](package.json)
 
-Toolkit Node.js réutilisable pour automatiser l'audit, le SEO, le contenu et la
-gestion des images d'une boutique Shopify, **piloté par fichiers de tâche
-Markdown** et alimenté par **Gemini 3.1** (texte / vision / image).
+Reusable Node.js toolkit to automate audits, SEO, content and image
+workflows for a Shopify store, **driven by Markdown task files** and
+powered by **Gemini 3.1** (text / vision / image).
 
-> Aucune dépendance npm. Uniquement Node.js ≥ 18 et le Shopify CLI.
+> No npm dependencies. Only Node.js ≥ 18 and the Shopify CLI.
 
-## Pourquoi ce toolkit
+## Why this toolkit
 
-| Besoin | Réponse |
+| Need | Answer |
 |---|---|
-| Auditer une boutique de A à Z | `audit/full-audit.js` → score SEO/UX/Contenu/Opérations |
-| Générer les meta SEO manquants | `seo/seo-update.js` |
-| Réécrire des descriptions trop courtes via IA | `content/update-products.js` + Gemini Text |
-| Régénérer une image produit | `images/image-generate.js` + Gemini Image |
-| Auditer la qualité des images | `images/visual-audit.js` + Gemini Vision |
-| Migrer des templates email Klaviyo → Shopify Email | `integrations/shopify-email/adapt-templates.js` |
+| Audit a store end-to-end | `audit/full-audit.js` → SEO/UX/Content/Operations score |
+| Generate the missing SEO meta tags | `seo/seo-update.js` |
+| Rewrite descriptions that are too short via AI | `content/update-products.js` + Gemini Text |
+| Regenerate a product image | `images/image-generate.js` + Gemini Image |
+| Audit image quality | `images/visual-audit.js` + Gemini Vision |
+| Migrate email templates Klaviyo → Shopify Email | `integrations/shopify-email/adapt-templates.js` |
 
-## Architecture en un coup d'œil
+## Architecture at a glance
 
 ```mermaid
 flowchart LR
-    ENV[".env<br/>credentials & marque"] --> CONFIG["lib/config.js"]
-    CONFIG --> CLI["Scripts CLI<br/>audit · seo · content · images"]
+    ENV[".env<br/>credentials & brand"] --> CONFIG["lib/config.js"]
+    CONFIG --> CLI["CLI scripts<br/>audit · seo · content · images"]
     SHOPIFY[("Shopify Admin<br/>GraphQL")] -->|fetch| FETCH["fetch-store-data.js"]
-    FETCH --> STORE_DATA[("store-data/*.md<br/>source de vérité locale")]
+    FETCH --> STORE_DATA[("store-data/*.md<br/>local source of truth")]
     STORE_DATA --> CLI
-    TASKS[("tasks/*.md<br/>intention décrite")] --> CLI
-    CLI -->|mutations idempotentes| SHOPIFY
-    CLI -->|prompts paramétrés| GEMINI[("Gemini 3.1<br/>Text · Vision · Image")]
+    TASKS[("tasks/*.md<br/>described intent")] --> CLI
+    CLI -->|idempotent mutations| SHOPIFY
+    CLI -->|parameterized prompts| GEMINI[("Gemini 3.1<br/>Text · Vision · Image")]
     GEMINI --> CLI
-    CLI -->|append résultats| TASKS
+    CLI -->|append results| TASKS
 ```
 
-**3 piliers** :
+**3 pillars**:
 
-1. **`store-data/`** — extraction unique de la boutique en 9 fichiers Markdown (source de vérité locale, diffable, lisible).
-2. **`lib/` + scripts CLI** — 14 modules réutilisables (un fichier = une responsabilité) + commandes par domaine (`audit/`, `seo/`, `content/`, `images/`).
-3. **`tasks/`** — fichiers Markdown décrivant l'intention (Cible + Action + Validation), exécutés par les scripts génériques qui appendent leurs résultats.
+1. **`store-data/`** — single extraction of the store into 9 Markdown
+   files (local source of truth, diffable, human-readable).
+2. **`lib/` + CLI scripts** — 14 reusable modules (one file = one
+   responsibility) + per-domain commands (`audit/`, `seo/`, `content/`,
+   `images/`).
+3. **`tasks/`** — Markdown files describing intent (Target + Action +
+   Validation), executed by generic scripts that append their results.
 
-## Installation (5 minutes)
+## Install (5 minutes)
 
 ```bash
-# 1. Cloner
+# 1. Clone
 git clone https://github.com/djebar-rayan/shopify-automation-toolkit.git
 cd shopify-automation-toolkit
 
-# 2. Configurer
+# 2. Configure
 cp .env.example .env
-# … puis éditer .env (SHOPIFY_STORE, GEMINI_API_KEY, …)
+# … then edit .env (SHOPIFY_STORE, GEMINI_API_KEY, …)
 
-# 3. S'authentifier au Shopify CLI
+# 3. Authenticate with the Shopify CLI
 shopify store auth --store <your-store>.myshopify.com \
   --scopes read_products,write_products,read_content,write_content,read_themes,write_files
 
-# 4. Extraire l'état actuel
+# 4. Extract the current state
 node fetch-store-data.js
 ```
 
-## Usage en 30 secondes
+## Usage in 30 seconds
 
 ```bash
-# Lecture seule : audit complet → audit-report.md
+# Read-only: full audit → audit-report.md
 node audit/full-audit.js
 
-# Audit ciblé via fichier de tâche
+# Targeted audit driven by a task file
 node audit/audit.js --task tasks/example-audit-images.md
 
-# SEO : générer les meta titles manquants (formules locales, gratuit)
+# SEO: generate the missing meta titles (local formulas, free)
 node seo/seo-update.js --target=titles --confirm
 
-# Contenu : enrichir descriptions courtes (Gemini Text)
+# Content: enrich short descriptions (Gemini Text)
 cp tasks/_template.md tasks/enrich-desc.md
-# … remplir, puis :
+# … fill it in, then:
 node content/update-products.js --task tasks/enrich-desc.md
 
-# Images : audit + régénération multi-variantes
+# Images: audit + multi-variant regeneration
 node images/image-audit.js
-node images/image-generate.js --mode=multi-variant --handle=mon-produit
-node images/image-upload.js --handle=mon-produit --dir=generated-images --confirm
+node images/image-generate.js --mode=multi-variant --handle=my-product
+node images/image-upload.js --handle=my-product --dir=generated-images --confirm
 ```
 
 ## Architecture
 
 ```
 shopify-automation-toolkit/
-├── lib/                  # Couche commune (modules réutilisables, un fichier = une responsabilité)
-│   ├── config.js                # lit .env, expose toutes les constantes
+├── lib/                  # Common layer (reusable modules, one file = one responsibility)
+│   ├── config.js                # reads .env, exposes all constants
 │   ├── shopify-graphql.js       # execGql / execMutation
-│   ├── task-file.js             # parser de fichier de tâche
-│   ├── store-data.js            # parser de store-data/<scope>.md
-│   ├── filter-dsl.js            # mini-DSL de filtre
+│   ├── task-file.js             # task-file parser
+│   ├── store-data.js            # parser for store-data/<scope>.md
+│   ├── filter-dsl.js            # mini filter DSL
 │   ├── cli.js                   # getFlag / confirm / sleep
 │   ├── text.js                  # stripHtml / wordCount
 │   ├── gemini-text.js           # Gemini Text (descriptions, prompts)
-│   ├── gemini-vision.js         # Gemini Vision (analyse d'images)
-│   ├── gemini-image.js          # Gemini Image (génération)
-│   ├── image-download.js        # téléchargement HTTP → base64
-│   ├── image-validate.js        # validation taille/résolution
+│   ├── gemini-vision.js         # Gemini Vision (image analysis)
+│   ├── gemini-image.js          # Gemini Image (generation)
+│   ├── image-download.js        # HTTP → base64 download
+│   ├── image-validate.js        # size/resolution validation
 │   ├── image-upload.js          # staged upload + multipart + productCreateMedia
-│   └── builders/                # générateurs paramétrés
+│   └── builders/                # parameterized generators
 │       ├── seo-meta.js              # meta titles/descriptions/alt
-│       ├── content-prompts.js       # prompts Gemini paramétrés
-│       ├── handle.js                # normalisation handle Unicode→ASCII
-│       ├── livraison.js             # bloc livraison HTML
-│       └── translit-presets/        # maps JSON pour scripts non-latins
+│       ├── content-prompts.js       # parameterized Gemini prompts
+│       ├── handle.js                # Unicode→ASCII handle normalization
+│       ├── shipping.js              # HTML shipping block
+│       └── translit-presets/        # JSON maps for non-Latin scripts
 │
-├── fetch-store-data.js   # Extraction unique → store-data/*.md (à relancer après modifs)
+├── fetch-store-data.js   # Single extraction → store-data/*.md (re-run after changes)
 │
-├── audit/                # LECTURE SEULE
-│   ├── audit.js                 # audit générique piloté par tâche
-│   ├── full-audit.js            # audit complet avec scoring
-│   └── examples/                # tâches d'audit prêtes à l'emploi
+├── audit/                # READ ONLY
+│   ├── audit.js                 # generic task-driven audit
+│   ├── full-audit.js            # full audit with scoring
+│   └── examples/                # ready-to-use audit tasks
 │
-├── seo/                  # MISE À JOUR DES META SEO
+├── seo/                  # SEO META UPDATES
 │   ├── seo-update.js            # titles / descriptions / alt
 │   └── examples/
 │
-├── content/              # MISE À JOUR DES PRODUITS / COLLECTIONS / PAGES
+├── content/              # PRODUCT / COLLECTION / PAGE UPDATES
 │   ├── update-products.js
 │   ├── update-collections.js
 │   ├── update-pages.js
-│   ├── handle-normalize.js      # CLI dédié pour les handles non-ASCII
+│   ├── handle-normalize.js      # dedicated CLI for non-ASCII handles
 │   └── examples/
 │
-├── images/               # WORKFLOW IMAGES
-│   ├── image-audit.js           # comptage + alt manquants
-│   ├── image-alt.js             # alt texts (formules ou Vision)
-│   ├── image-generate.js        # génération Gemini Image (single / multi-variant)
-│   ├── image-upload.js          # staged upload + bind variantes
-│   ├── visual-audit.js          # qualité d'image via Gemini Vision
+├── images/               # IMAGE WORKFLOW
+│   ├── image-audit.js           # counts + missing alt
+│   ├── image-alt.js             # alt texts (formulas or Vision)
+│   ├── image-generate.js        # Gemini Image generation (single / multi-variant)
+│   ├── image-upload.js          # staged upload + variant binding
+│   ├── visual-audit.js          # image quality via Gemini Vision
 │   └── examples/
 │
-├── integrations/         # CONNECTEURS TIERS
-│   ├── klaviyo/                 # export read-only Klaviyo
-│   └── shopify-email/           # adaptation HTML pour Shopify Email
+├── integrations/         # THIRD-PARTY CONNECTORS
+│   ├── klaviyo/                 # read-only Klaviyo export
+│   └── shopify-email/           # HTML adaptation for Shopify Email
 │
-├── tasks/                # FICHIERS DE TÂCHE
-│   ├── _template.md             # modèle commenté
-│   └── example-*.md             # exemples
+├── tasks/                # TASK FILES
+│   ├── _template.md             # commented template
+│   └── example-*.md             # examples
 │
-├── store-data/           # AUTO-GÉNÉRÉ par fetch-store-data.js (gitignore)
-├── generated-images/     # AUTO-GÉNÉRÉ par images/image-generate.js (gitignore)
+├── store-data/           # AUTO-GENERATED by fetch-store-data.js (gitignored)
+├── generated-images/     # AUTO-GENERATED by images/image-generate.js (gitignored)
 │
-├── docs/                 # Documentation détaillée
+├── docs/                 # Detailed documentation
 │   ├── QUICK_START.md
 │   ├── COMMAND_REFERENCE.md
 │   ├── TASK_FORMAT.md
@@ -158,59 +162,50 @@ shopify-automation-toolkit/
 │   ├── TROUBLESHOOTING.md
 │   └── SKILLS.md
 │
-├── .claude/skills/       # Skills Claude Code (optionnels, partage GitHub)
-├── .env.example          # Modèle de config
-├── CLAUDE.md             # Règles techniques critiques
-├── ARCHITECTURE.md       # Vision triade store-data/scripts/tasks
+├── .claude/skills/       # Claude Code skills (optional, GitHub-shareable)
+├── .env.example          # Config template
+├── CLAUDE.md             # Critical technical rules
+├── ARCHITECTURE.md       # store-data/scripts/tasks triad vision
 └── package.json
 ```
 
-## Modèle d'utilisation : la tâche pilote tout
+## Usage model: the task drives everything
 
-Au lieu d'écrire un script par cas d'usage, le toolkit lit un **fichier de tâche
-Markdown** qui décrit Cible / Action / Validation. Les scripts génériques
-appliquent. Cela permet :
+Instead of writing a script per use case, the toolkit reads a
+**Markdown task file** describing Target / Action / Validation. Generic
+scripts then apply it. This brings:
 
-- **traçabilité** : chaque tâche est un fichier versionnable
-- **idempotence** : la tâche enregistre ses résultats à la fin
-- **généricité** : un même script (`content/update-products.js`) couvre
-  toutes les mises à jour produits, peu importe le champ ou le filtre
+- **traceability** — every task is a versionable file
+- **idempotence** — the task records its results at the end
+- **genericity** — a single script (`content/update-products.js`) covers
+  every product update, regardless of the field or filter
 
-Voir [`docs/TASK_FORMAT.md`](docs/TASK_FORMAT.md) pour la spec complète.
+See [`docs/TASK_FORMAT.md`](docs/TASK_FORMAT.md) for the full spec.
 
-## Skills Claude Code (optionnel)
+## Claude Code skills (optional)
 
-Le dossier `.claude/skills/` contient 8 skills prêtes à l'emploi pour
-**Claude Code**. Voir [`docs/SKILLS.md`](docs/SKILLS.md) pour les installer.
+The `.claude/skills/` folder contains 8 ready-to-use skills for
+**Claude Code**. See [`docs/SKILLS.md`](docs/SKILLS.md) to install them.
 
 ## Documentation
 
-- [docs/QUICK_START.md](docs/QUICK_START.md) — parcours installation → 1er audit
-- [docs/COMMAND_REFERENCE.md](docs/COMMAND_REFERENCE.md) — toutes les commandes + flags
-- [docs/TASK_FORMAT.md](docs/TASK_FORMAT.md) — format des fichiers de tâche + mini-DSL
-- [docs/GEMINI_SETUP.md](docs/GEMINI_SETUP.md) — clé API + modèles
-- [docs/SHOPIFY_AUTH.md](docs/SHOPIFY_AUTH.md) — scopes OAuth + dépannage
-- [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) — FAQ et erreurs courantes
-- [docs/SKILLS.md](docs/SKILLS.md) — skills Claude Code fournies
-- [CLAUDE.md](CLAUDE.md) — **règles techniques critiques** à ne jamais violer
-- [ARCHITECTURE.md](ARCHITECTURE.md) — pourquoi store-data + scripts + tasks
+- [docs/QUICK_START.md](docs/QUICK_START.md) — install → first audit walkthrough
+- [docs/COMMAND_REFERENCE.md](docs/COMMAND_REFERENCE.md) — every command + flags
+- [docs/TASK_FORMAT.md](docs/TASK_FORMAT.md) — task-file format + mini-DSL
+- [docs/GEMINI_SETUP.md](docs/GEMINI_SETUP.md) — API key + models
+- [docs/SHOPIFY_AUTH.md](docs/SHOPIFY_AUTH.md) — OAuth scopes + troubleshooting
+- [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) — FAQ and common errors
+- [docs/SKILLS.md](docs/SKILLS.md) — bundled Claude Code skills
+- [CLAUDE.md](CLAUDE.md) — **critical technical rules** never to violate
+- [ARCHITECTURE.md](ARCHITECTURE.md) — why store-data + scripts + tasks
 
-## Compétences démontrées
+## License
 
-- **Node.js « pur »** : aucun `npm install` requis. Uniquement les built-ins (`https`, `fs`, `child_process`, `readline`, `path`). 32 fichiers JS, ~3 500 lignes, zéro `node_modules/`.
-- **Shopify Admin GraphQL** : queries paginées (cursor `after`/`endCursor`), mutations idempotentes (`productUpdate`, `collectionUpdate`, `pageUpdate`, `productCreateMedia`, `productVariantsBulkUpdate`), staged uploads multipart (`stagedUploadsCreate`), gestion fine des scopes OAuth.
-- **Intégration LLM** : Gemini 3.1 Flash en 3 modes (Text pour rédaction de descriptions, Vision pour audit visuel d'images, Image pour génération multi-variantes avec image de référence), retry exponentiel sur rate limit 429/503, validation de la qualité (taille ≥ 50 KB, résolution ≥ 800×800).
-- **Architecture pilotée par fichiers** : tâches Markdown versionnables (traçabilité git-blame), mini-DSL de filtre (`status ACTIVE, images < 3, no_alt`), source de vérité locale `store-data/` (extraction unique → 9 fichiers MD diffables).
-- **Single Responsibility Principle** : `lib/` découpé en 14 modules ciblés (config, GraphQL, Gemini text/vision/image, pipeline image download/validate/upload, parsers task-file/store-data, filter-DSL, builders SEO/contenu/handle/livraison).
-- **Sécurité by design** : `.gitignore` strict (`.env`, `store-data/*.md`, `generated-images/*.jpg`), zéro PII dans les exports Klaviyo (compteurs agrégés uniquement), validation multi-étapes (dry-run → préview → confirmation → mutation), aucune mutation possible sans `--confirm`.
-- **Documentation portfolio-ready** : 7 docs spécifiques (Quick Start, Command Reference, Task Format, Gemini Setup, Shopify Auth, Troubleshooting, Skills) + README avec diagramme Mermaid + 8 skills Claude Code packagées pour partage.
+MIT — see [LICENSE](LICENSE).
 
-## Licence
-
-MIT — voir [LICENSE](LICENSE).
-
-## Auteur
+## Author
 
 **Rayan Djebar** — [djebar.rayan75@gmail.com](mailto:djebar.rayan75@gmail.com) · [GitHub](https://github.com/djebar-rayan)
 
-Projet réalisé pendant un stage Shopify, refondu en toolkit générique pour partage open source.
+Built during a Shopify internship, then refactored into a generic
+open-source toolkit.

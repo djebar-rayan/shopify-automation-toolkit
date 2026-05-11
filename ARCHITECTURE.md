@@ -1,166 +1,169 @@
 # Architecture — `store-data` + `scripts` + `tasks`
 
-Ce document explique le **pourquoi** des trois piliers du toolkit. Le **comment**
-est dans `README.md` et `docs/COMMAND_REFERENCE.md`.
+This document explains the **why** behind the toolkit's three pillars.
+The **how** lives in `README.md` and `docs/COMMAND_REFERENCE.md`.
 
 ---
 
-## Le problème qu'on résout
+## The problem we're solving
 
-Une boutique Shopify, ça change tout le temps. À chaque modification (ajout
-de produit, mise à jour de description, normalisation de handle…) il faut :
+A Shopify store changes constantly. Every modification (new product,
+description update, handle normalization, …) requires:
 
-1. **Comprendre l'état actuel** sans interroger Shopify 50 fois (rate limit).
-2. **Décrire l'intention** (ex : "tous les produits avec moins de 3 images")
-   d'une façon que l'humain et l'agent IA peuvent vérifier ensemble.
-3. **Appliquer** la mutation sur Shopify de façon idempotente.
-4. **Tracer** ce qui a été fait pour pouvoir l'auditer plus tard.
+1. **Understanding the current state** without hammering Shopify 50
+   times (rate limit).
+2. **Describing the intent** (e.g. "all products with fewer than 3
+   images") in a way that both a human and an AI agent can verify
+   together.
+3. **Applying** the mutation to Shopify idempotently.
+4. **Tracing** what was done so it can be audited later.
 
-Les scripts ad-hoc s'accumulent vite et deviennent ingérables. La triade
-`store-data + scripts + tasks` répond aux quatre points.
+Ad-hoc scripts pile up fast and become unmanageable. The
+`store-data + scripts + tasks` triad addresses all four points.
 
 ---
 
-## Pilier 1 — `store-data/` : la source de vérité locale
+## Pillar 1 — `store-data/`: the local source of truth
 
-`fetch-store-data.js` extrait l'état complet de la boutique en **9 fichiers
-Markdown** (un par catégorie) :
+`fetch-store-data.js` extracts the full state of the store into
+**9 Markdown files** (one per category):
 
 ```
 store-data/
-├── products.md       # 1 bloc par produit (ID, handle, SEO, images, variantes, metafields)
+├── products.md       # 1 block per product (ID, handle, SEO, images, variants, metafields)
 ├── collections.md
-├── customers.md      # agrégat anonymisé (zéro PII)
-├── orders.md         # agrégat (CA, panier moyen, top produits)
+├── customers.md      # anonymized aggregate (zero PII)
+├── orders.md         # aggregate (revenue, AOV, top products)
 ├── pages.md
-├── metafields.md     # synthèse par namespace
+├── metafields.md     # summary per namespace
 ├── redirects.md
 ├── navigation.md
-└── store-meta.md     # snapshot global (plan, devise, volumes)
+└── store-meta.md     # global snapshot (plan, currency, volumes)
 ```
 
-**Pourquoi du Markdown et pas du JSON ?**
+**Why Markdown rather than JSON?**
 
-- **Lisible par un humain** dans n'importe quel éditeur ou GitHub.
-- **Diffable** : `git diff` montre lisiblement ce qui a changé entre
-  deux extractions (utile pour les audits récurrents).
-- **Parseable** par les scripts : un format MD avec sections `## Titre` et
-  champs `- **Key** : value` est trivial à lire.
+- **Human-readable** in any editor or on GitHub.
+- **Diffable**: `git diff` clearly shows what changed between two
+  extractions (useful for recurring audits).
+- **Parseable** by scripts: an MD format with `## Title` sections and
+  `- **Key**: value` fields is trivial to read.
 
-`store-data/` est **gitignoré** : c'est local et spécifique à chaque boutique.
+`store-data/` is **gitignored**: it's local and store-specific.
 
 ---
 
-## Pilier 2 — `scripts/` (renommé en `lib/` + dossiers domaine) : un outil par responsabilité
+## Pillar 2 — `lib/` + domain folders: one tool, one responsibility
 
-Chaque script CLI fait **une chose** :
+Every CLI script does **one thing**:
 
-| Domaine | Scripts |
+| Domain | Scripts |
 |---|---|
 | Audit | `audit/audit.js`, `audit/full-audit.js` |
 | SEO | `seo/seo-update.js` |
-| Contenu | `content/update-products.js`, `content/update-collections.js`, `content/update-pages.js`, `content/handle-normalize.js` |
+| Content | `content/update-products.js`, `content/update-collections.js`, `content/update-pages.js`, `content/handle-normalize.js` |
 | Images | `images/image-audit.js`, `images/image-alt.js`, `images/image-generate.js`, `images/image-upload.js`, `images/visual-audit.js` |
 
-Tous s'appuient sur `lib/` pour la logique partagée :
+All of them rely on `lib/` for shared logic:
 
-- `lib/config.js` — config centralisée (.env)
+- `lib/config.js` — centralized config (`.env`)
 - `lib/shopify-graphql.js` — `execGql` / `execMutation`
-- `lib/store-data.js` — parser de `store-data/<scope>.md`
-- `lib/task-file.js` — parser de fichier de tâche
-- `lib/filter-dsl.js` — mini-langage de filtre
+- `lib/store-data.js` — parser for `store-data/<scope>.md`
+- `lib/task-file.js` — task-file parser
+- `lib/filter-dsl.js` — mini filter DSL
 - `lib/gemini-text.js` / `gemini-vision.js` / `gemini-image.js` — Gemini
-- `lib/image-download.js` / `image-validate.js` / `image-upload.js` — pipeline image
-- `lib/builders/seo-meta.js` / `content-prompts.js` / `handle.js` / `livraison.js` — formules paramétrées
+- `lib/image-download.js` / `image-validate.js` / `image-upload.js` — image pipeline
+- `lib/builders/seo-meta.js` / `content-prompts.js` / `handle.js` / `shipping.js` — parameterized formulas
 
-**Règle** : un fichier = une responsabilité. Si un script grossit, il est
-découpé.
+**Rule**: one file = one responsibility. If a script grows, it gets
+split.
 
 ---
 
-## Pilier 3 — `tasks/` : l'intention décrite, vérifiable, idempotente
+## Pillar 3 — `tasks/`: intent described, verifiable, idempotent
 
-Chaque mise à jour est décrite dans un fichier Markdown :
+Every update is described in a Markdown file:
 
 ```markdown
-## Cible
-- Scope : products
-- Filtre : status ACTIVE, desc_words < 150
+## Target
+- Scope: products
+- Filter: status ACTIVE, desc_words < 150
 
 ## Action
-- Type : update
-- Champ modifié : descriptionHtml
-- Valeur : générer via Gemini avec ce prompt : "…"
+- Type: update
+- Field: descriptionHtml
+- Value: generate via Gemini with this prompt: "…"
 
-## Validation avant application
-- [x] Vérifier dans store-data/products.md
-- [x] Afficher dry-run
-- [x] Demander confirmation
+## Validation before applying
+- [x] Verify in store-data/products.md
+- [x] Show dry-run
+- [x] Ask for confirmation
 
-## Critères de succès
-- 100 % des produits ciblés ont une description ≥ 150 mots
+## Success criteria
+- 100% of targeted products have a description ≥ 150 words
 ```
 
-Les scripts génériques (`content/update-products.js`, `audit/audit.js`, …)
-**lisent ce fichier**, appliquent l'action, et **écrivent les résultats**
-en bas du fichier :
+The generic scripts (`content/update-products.js`, `audit/audit.js`, …)
+**read this file**, apply the action, and **write the results** at the
+bottom of the file:
 
 ```markdown
-## Résultats — 2026-01-15T20:00:00Z
-- Entités ciblées : 12
-- Entités modifiées : 12
-- Erreurs : 0
+## Results — 2026-01-15T20:00:00Z
+- Entities targeted: 12
+- Entities modified: 12
+- Errors: 0
 ```
 
-**Avantages** :
+**Benefits**:
 
-- Le fichier de tâche est une **trace versionnable** (git-blame friendly).
-- Le dry-run permet de **valider** l'intention avant la mutation.
-- Les **critères de succès** rendent l'audit objectif.
-- L'agent IA peut générer la tâche, l'utilisateur la relit et l'approuve.
+- The task file is a **versionable trace** (git-blame friendly).
+- The dry-run lets you **validate** the intent before mutating.
+- The **success criteria** make the audit objective.
+- The AI agent can generate the task, the user reviews and approves it.
 
 ---
 
-## Mini-DSL de filtre
+## Filter mini-DSL
 
-Le champ `Filtre` accepte une syntaxe simple, combinable par virgule (= AND) :
+The `Filter` field accepts a simple syntax, combinable with commas
+(= AND):
 
 ```
-tous                          → toutes les entités
-handle X                      → entité dont le handle = X
-handles X, Y, Z               → entités dont le handle ∈ {X, Y, Z}
-tag X                         → entités taggées X
-status ACTIVE|DRAFT|ARCHIVED  → produits avec ce statut
-images < N                    → produits avec moins de N images
+all                           → every entity
+handle X                      → entity whose handle = X
+handles X, Y, Z               → entities whose handle ∈ {X, Y, Z}
+tag X                         → entities tagged with X
+status ACTIVE|DRAFT|ARCHIVED  → products with that status
+images < N                    → products with fewer than N images
 images > N
 images = 0
 desc_words < N
 desc_words > N
-seo_title manquant
-seo_description manquant
-no_alt                        → au moins une image sans alt
+seo_title missing
+seo_description missing
+no_alt                        → at least one image without alt
 variants > N
 vendor X
 ```
 
-Le DSL est implémenté dans `lib/filter-dsl.js` et entièrement testable
-unitairement.
+The DSL is implemented in `lib/filter-dsl.js` and is fully
+unit-testable.
 
 ---
 
-## Boucle de travail typique
+## Typical workflow loop
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│ 1. node fetch-store-data.js          → store-data/*.md       │
-│ 2. node audit/full-audit.js          → audit-report.md       │
-│    (ou audit ciblé via tasks/)                                │
-│ 3. cp tasks/_template.md tasks/<task>.md                      │
-│ 4. node content/update-products.js --task tasks/<task>.md     │
-│    → mutations Shopify + ## Résultats appendés à la tâche     │
-│ 5. node fetch-store-data.js          → re-fetch               │
-│ 6. git add tasks/<task>.md && git commit  (traçabilité)       │
-└─────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│ 1. node fetch-store-data.js          → store-data/*.md        │
+│ 2. node audit/full-audit.js          → audit-report.md        │
+│    (or targeted audit via tasks/)                              │
+│ 3. cp tasks/_template.md tasks/<task>.md                       │
+│ 4. node content/update-products.js --task tasks/<task>.md      │
+│    → Shopify mutations + ## Results appended to the task       │
+│ 5. node fetch-store-data.js          → re-fetch                │
+│ 6. git add tasks/<task>.md && git commit  (traceability)       │
+└──────────────────────────────────────────────────────────────┘
 ```
 
-Tout est rejouable, vérifiable, traçable.
+Everything is replayable, verifiable, traceable.

@@ -1,21 +1,21 @@
 'use strict';
 
 // ============================================================
-// images/visual-audit.js — Audit qualité images via Gemini Vision
+// images/visual-audit.js — Image quality audit via Gemini Vision
 // ------------------------------------------------------------
-// Pour chaque image des produits filtrés, demande à Gemini Vision
-// de classifier la qualité (ADEQUATE | A_REMPLACER | NO_IMAGE)
-// et de fournir un commentaire court.
+// For each image of each product in the filter, asks Gemini Vision
+// to classify the quality (ADEQUATE | REPLACE | NO_IMAGE) and to
+// provide a short comment.
 //
-// Le résultat est mis en cache JSON (.audit-tmp/visual-audit.json)
-// pour pouvoir relancer la décision sans repayer les appels.
+// The result is cached as JSON (.audit-tmp/visual-audit.json) so the
+// decision can be re-run without paying again.
 //
-// Aucune mutation. Sortie : visual-audit-report.md
+// No mutation. Output: visual-audit-report.md
 //
-// Usage :
+// Usage:
 //   node images/visual-audit.js --filter "status ACTIVE"
-//   node images/visual-audit.js --filter "handle mon-produit"
-//   node images/visual-audit.js --refresh   # ignore le cache
+//   node images/visual-audit.js --filter "handle my-product"
+//   node images/visual-audit.js --refresh   # ignore cache
 // ============================================================
 
 const fs = require('fs');
@@ -33,14 +33,14 @@ const CACHE_PATH = path.join(config.TMP_DIR, 'visual-audit.json');
 const REPORT_PATH = path.join(config.WORKSPACE, 'visual-audit-report.md');
 
 const PROMPT = [
-  'Tu es un expert visuel e-commerce. Analyse cette image produit.',
-  'Réponds UNIQUEMENT en JSON :',
-  '{ "status": "ADEQUATE" | "A_REMPLACER" | "NO_IMAGE",',
-  '  "reasons": ["raison 1", "raison 2"],',
-  '  "summary": "phrase courte" }',
-  'ADEQUATE = composition correcte, fond neutre, produit lisible.',
-  'A_REMPLACER = floue / mal cadrée / produit difficile à identifier.',
-  'NO_IMAGE = pas vraiment un produit (placeholder, watermark, blanc).',
+  'You are an e-commerce visual expert. Analyze this product image.',
+  'Reply ONLY in JSON:',
+  '{ "status": "ADEQUATE" | "REPLACE" | "NO_IMAGE",',
+  '  "reasons": ["reason 1", "reason 2"],',
+  '  "summary": "short sentence" }',
+  'ADEQUATE = correct composition, neutral background, product readable.',
+  'REPLACE = blurry / poorly framed / product hard to identify.',
+  'NO_IMAGE = not actually a product (placeholder, watermark, blank).',
 ].join('\n');
 
 async function main() {
@@ -48,7 +48,7 @@ async function main() {
   const refresh = hasFlag('refresh');
 
   console.log(`\n━━━ visual-audit ━━━`);
-  console.log(`  Filtre : ${filter}\n`);
+  console.log(`  Filter: ${filter}\n`);
 
   fs.mkdirSync(config.TMP_DIR, { recursive: true });
   const cache = (!refresh && fs.existsSync(CACHE_PATH))
@@ -57,7 +57,7 @@ async function main() {
 
   const blocks = parseStoreDataBlocks('products.md');
   const matched = applyFilter(blocks, filter);
-  if (!matched.length) { console.log('  Aucune cible.'); return; }
+  if (!matched.length) { console.log('  No target.'); return; }
 
   const Q = `
     query Get($id: ID!) {
@@ -108,36 +108,36 @@ async function main() {
     }
   }
 
-  // Génération du rapport
+  // Build the report
   const adequate = results.filter(r => r.verdict.status === 'ADEQUATE');
-  const replace = results.filter(r => r.verdict.status === 'A_REMPLACER');
+  const replace = results.filter(r => r.verdict.status === 'REPLACE');
   const none = results.filter(r => r.verdict.status === 'NO_IMAGE');
 
   const md = [
-    '# Audit visuel des images',
-    `**Date** : ${new Date().toISOString()}  `,
-    `**Filtre** : ${filter}  `,
-    `**Total images analysées** : ${results.length}  `,
-    `**ADEQUATE** : ${adequate.length}  |  **À REMPLACER** : ${replace.length}  |  **PAS UNE IMAGE PRODUIT** : ${none.length}`,
+    '# Visual image audit',
+    `**Date**: ${new Date().toISOString()}  `,
+    `**Filter**: ${filter}  `,
+    `**Total images analyzed**: ${results.length}  `,
+    `**ADEQUATE**: ${adequate.length}  |  **REPLACE**: ${replace.length}  |  **NOT A PRODUCT IMAGE**: ${none.length}`,
     '',
     '---',
     '',
-    '## Images à remplacer',
+    '## Images to replace',
     '',
-    '| Produit | Handle | # | Raison | Résumé |',
+    '| Product | Handle | # | Reason | Summary |',
     '|---|---|---|---|---|',
     ...replace.map(r => `| ${r.title} | \`${r.handle}\` | ${r.idx} | ${(r.verdict.reasons || []).join('; ')} | ${r.verdict.summary || ''} |`),
     '',
-    '## Images de type "pas un produit"',
+    '## Images that are not actual products',
     '',
-    '| Produit | Handle | # | Résumé |',
+    '| Product | Handle | # | Summary |',
     '|---|---|---|---|',
     ...none.map(r => `| ${r.title} | \`${r.handle}\` | ${r.idx} | ${r.verdict.summary || ''} |`),
     '',
   ].join('\n');
   fs.writeFileSync(REPORT_PATH, md, 'utf8');
-  console.log(`\n  ✓ Rapport : ${REPORT_PATH}`);
-  console.log(`  Cache    : ${CACHE_PATH}`);
+  console.log(`\n  ✓ Report : ${REPORT_PATH}`);
+  console.log(`  Cache   : ${CACHE_PATH}`);
 }
 
 main().catch(e => { console.error('FATAL:', e.message); process.exit(1); });

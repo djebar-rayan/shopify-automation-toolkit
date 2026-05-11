@@ -1,21 +1,21 @@
 'use strict';
 
 // ============================================================
-// integrations/klaviyo/klaviyo-export.js — Export Klaviyo (lecture seule)
+// integrations/klaviyo/klaviyo-export.js — Klaviyo export (read-only)
 // ------------------------------------------------------------
-// Ce script effectue UNIQUEMENT des requêtes GET vers l'API Klaviyo.
-// Aucune mutation (POST/PUT/PATCH/DELETE) — règle stricte.
+// This script ONLY performs GET requests against the Klaviyo API.
+// No mutation (POST/PUT/PATCH/DELETE) — strict rule.
 //
-// Sortie dans le dossier de ce script :
+// Output in this folder:
 //   - flows.md, lists.md, segments.md, metrics.md, profiles-summary.md
-//   - templates/<flow-slug>_<n>.html        (un fichier par email du flow)
-//   - klaviyo-summary.md                     (vue d'ensemble agrégée)
+//   - templates/<flow-slug>_<n>.html        (one file per flow email)
+//   - klaviyo-summary.md                     (aggregated overview)
 //
-// Aucune donnée personnelle (PII) n'est stockée — uniquement des compteurs
-// et des templates HTML désincorporés du tracking.
+// No personal data (PII) is stored — counts only and HTML templates
+// stripped of tracking.
 //
-// Variables d'environnement :
-//   - KLAVIYO_API_KEY (obligatoire) — clé Private API "pk_*"
+// Environment variables:
+//   - KLAVIYO_API_KEY (required) — Private API key "pk_*"
 // ============================================================
 
 const fs = require('fs');
@@ -41,7 +41,7 @@ function ensureDirs() {
 
 function writeFile(filename, content) {
   fs.writeFileSync(path.join(OUT_DIR, filename), content, 'utf8');
-  console.log(`  ✅ ${filename} (${content.length} car.)`);
+  console.log(`  ✅ ${filename} (${content.length} chars)`);
 }
 
 function writeTemplate(filename, content) {
@@ -49,12 +49,12 @@ function writeTemplate(filename, content) {
 }
 
 function slugify(s) {
-  return String(s || 'sans-nom')
+  return String(s || 'no-name')
     .normalize('NFD').replace(/[̀-ͯ]/g, '')
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
-    .slice(0, 60) || 'sans-nom';
+    .slice(0, 60) || 'no-name';
 }
 
 function fmtDate(iso) {
@@ -76,7 +76,7 @@ function klaviyoGet(pathOrUrl, attempt = 1) {
         ? new URL(pathOrUrl)
         : new URL(`https://${KLAVIYO_HOST}${pathOrUrl}`);
     } catch (_) {
-      console.log(`  ❌ URL invalide: ${pathOrUrl}`);
+      console.log(`  ❌ Invalid URL: ${pathOrUrl}`);
       return resolve(null);
     }
     const opts = {
@@ -98,18 +98,18 @@ function klaviyoGet(pathOrUrl, attempt = 1) {
         const code = res.statusCode;
         if (code === 200) {
           try { return resolve(JSON.parse(raw)); }
-          catch (e) { console.log(`  ⚠️ JSON invalide ${urlObj.pathname}: ${e.message}`); return resolve(null); }
+          catch (e) { console.log(`  ⚠️ Invalid JSON ${urlObj.pathname}: ${e.message}`); return resolve(null); }
         }
         if (code === 403 || code === 404) {
-          console.log(`  ⚠️ ${code} sur ${urlObj.pathname}, on continue`);
+          console.log(`  ⚠️ ${code} on ${urlObj.pathname}, continuing`);
           return resolve(null);
         }
         if (code === 429 && attempt === 1) {
-          console.log(`  ⚠️ 429 rate limit ${urlObj.pathname}, retry dans 60s`);
+          console.log(`  ⚠️ 429 rate limit on ${urlObj.pathname}, retry in 60s`);
           await sleep(60000);
           return resolve(await klaviyoGet(pathOrUrl, 2));
         }
-        console.log(`  ⚠️ HTTP ${code} sur ${urlObj.pathname}: ${raw.slice(0, 200)}`);
+        console.log(`  ⚠️ HTTP ${code} on ${urlObj.pathname}: ${raw.slice(0, 200)}`);
         return resolve(null);
       });
     });
@@ -117,11 +117,11 @@ function klaviyoGet(pathOrUrl, attempt = 1) {
     req.on('error', async (err) => {
       if (attempt < MAX_RETRIES) {
         const wait = 2000 * attempt;
-        console.log(`  ⚠️ erreur réseau ${urlObj.pathname}: ${err.message} — retry dans ${wait}ms`);
+        console.log(`  ⚠️ Network error ${urlObj.pathname}: ${err.message} — retry in ${wait}ms`);
         await sleep(wait);
         return resolve(await klaviyoGet(pathOrUrl, attempt + 1));
       }
-      console.log(`  ⚠️ erreur réseau persistante ${urlObj.pathname}: ${err.message}`);
+      console.log(`  ⚠️ Persistent network error ${urlObj.pathname}: ${err.message}`);
       return resolve(null);
     });
     req.end();
@@ -171,33 +171,33 @@ function isEmailAction(ac) {
 
 function writeFlowsMd(enriched) {
   const lines = [
-    '# Flows Klaviyo',
-    `**Exporté le** : ${new Date().toISOString()}`,
-    `**Total** : ${enriched.length}`,
+    '# Klaviyo flows',
+    `**Exported on**: ${new Date().toISOString()}`,
+    `**Total**: ${enriched.length}`,
     '',
   ];
   for (const { flow, actions } of enriched) {
     const a = flow.attributes || {};
     const emailCount = actions.filter(isEmailAction).length;
     lines.push('---');
-    lines.push(`## ${a.name || '(sans nom)'}`);
-    lines.push(`- **ID** : ${flow.id}`);
-    lines.push(`- **Statut** : ${a.status || '—'}`);
-    lines.push(`- **Trigger** : ${detectTrigger(a)}`);
-    lines.push(`- **Nb actions** : ${actions.length}`);
-    lines.push(`- **Nb emails** : ${emailCount}`);
-    lines.push(`- **Créé le** : ${fmtDate(a.created)}`);
-    lines.push(`- **Modifié le** : ${fmtDate(a.updated)}`);
+    lines.push(`## ${a.name || '(no name)'}`);
+    lines.push(`- **ID**: ${flow.id}`);
+    lines.push(`- **Status**: ${a.status || '—'}`);
+    lines.push(`- **Trigger**: ${detectTrigger(a)}`);
+    lines.push(`- **Action count**: ${actions.length}`);
+    lines.push(`- **Email count**: ${emailCount}`);
+    lines.push(`- **Created**: ${fmtDate(a.created)}`);
+    lines.push(`- **Updated**: ${fmtDate(a.updated)}`);
     lines.push('');
   }
   writeFile('flows.md', lines.join('\n'));
 }
 
 // ------------------------------------------------------------
-// Templates HTML par email
+// HTML templates per email
 // ------------------------------------------------------------
 async function exportTemplates(enriched) {
-  console.log('\n📥 Templates email…');
+  console.log('\n📥 Email templates…');
   let total = 0, withTpl = 0, withoutTpl = 0;
   for (const { flow, actions } of enriched) {
     const slug = slugify(flow.attributes?.name);
@@ -208,7 +208,7 @@ async function exportTemplates(enriched) {
       const messages = (msgsRes && Array.isArray(msgsRes.data)) ? msgsRes.data : [];
       if (messages.length === 0) {
         idx += 1; total += 1; withoutTpl += 1;
-        writeTemplate(`${slug}_${idx}-no-message.txt`, `Flow : ${flow.attributes?.name}\nAction ${ac.id} sans flow-message.`);
+        writeTemplate(`${slug}_${idx}-no-message.txt`, `Flow: ${flow.attributes?.name}\nAction ${ac.id} has no flow-message.`);
         continue;
       }
       for (const msg of messages) {
@@ -223,11 +223,11 @@ async function exportTemplates(enriched) {
         if (!tpl) {
           withoutTpl += 1;
           writeTemplate(`${slug}_${idx}-no-template.txt`, [
-            `Flow : ${flow.attributes?.name}`,
-            `Subject : ${subject}`,
-            `From : ${fromLabel} <${fromEmail}>`,
-            `Preview : ${previewText}`,
-            'Pas de template HTML lié (éditeur drag&drop ?).',
+            `Flow: ${flow.attributes?.name}`,
+            `Subject: ${subject}`,
+            `From: ${fromLabel} <${fromEmail}>`,
+            `Preview: ${previewText}`,
+            'No HTML template linked (drag-and-drop editor?).',
           ].join('\n'));
           continue;
         }
@@ -239,7 +239,7 @@ async function exportTemplates(enriched) {
           `  Subject : ${subject}`,
           `  From    : ${fromLabel} <${fromEmail}>`,
           `  Preview : ${previewText}`,
-          `  Exporté : ${new Date().toISOString()}`,
+          `  Exported: ${new Date().toISOString()}`,
           '-->',
           '',
         ].join('\n');
@@ -248,7 +248,7 @@ async function exportTemplates(enriched) {
       }
     }
   }
-  console.log(`  ${total} messages — ${withTpl} avec template, ${withoutTpl} sans`);
+  console.log(`  ${total} messages — ${withTpl} with template, ${withoutTpl} without`);
   return { total, withTpl, withoutTpl };
 }
 
@@ -256,14 +256,14 @@ async function exportTemplates(enriched) {
 // Lists / Segments / Metrics
 // ------------------------------------------------------------
 async function exportLists() {
-  console.log('\n📥 Listes…');
+  console.log('\n📥 Lists…');
   const lists = await klaviyoGetAll('/api/lists/');
   const lines = [
-    '# Listes Klaviyo',
-    `**Exporté le** : ${new Date().toISOString()}`,
-    `**Total** : ${lists.length}`,
+    '# Klaviyo lists',
+    `**Exported on**: ${new Date().toISOString()}`,
+    `**Total**: ${lists.length}`,
     '',
-    '| Nom | ID | Nb profils | Créée le |',
+    '| Name | ID | Profile count | Created |',
     '|---|---|---|---|',
   ];
   for (const l of lists) {
@@ -278,11 +278,11 @@ async function exportSegments() {
   console.log('\n📥 Segments…');
   const segs = await klaviyoGetAll('/api/segments/');
   const lines = [
-    '# Segments Klaviyo',
-    `**Exporté le** : ${new Date().toISOString()}`,
-    `**Total** : ${segs.length}`,
+    '# Klaviyo segments',
+    `**Exported on**: ${new Date().toISOString()}`,
+    `**Total**: ${segs.length}`,
     '',
-    '| Nom | ID | Définition (200c) | Créé le |',
+    '| Name | ID | Definition (truncated 200c) | Created |',
     '|---|---|---|---|',
   ];
   for (const s of segs) {
@@ -295,14 +295,14 @@ async function exportSegments() {
 }
 
 async function exportMetrics() {
-  console.log('\n📥 Métriques…');
+  console.log('\n📥 Metrics…');
   const metrics = await klaviyoGetAll('/api/metrics/');
   const lines = [
-    '# Métriques Klaviyo',
-    `**Exporté le** : ${new Date().toISOString()}`,
-    `**Total** : ${metrics.length}`,
+    '# Klaviyo metrics',
+    `**Exported on**: ${new Date().toISOString()}`,
+    `**Total**: ${metrics.length}`,
     '',
-    '| Nom | ID | Intégration |',
+    '| Name | ID | Integration |',
     '|---|---|---|',
   ];
   for (const m of metrics) {
@@ -314,10 +314,10 @@ async function exportMetrics() {
 }
 
 // ------------------------------------------------------------
-// Profils — agrégats UNIQUEMENT (zéro PII)
+// Profiles — aggregates ONLY (zero PII)
 // ------------------------------------------------------------
 async function exportProfilesSummary() {
-  console.log('\n📥 Profils (agrégats sans PII)…');
+  console.log('\n📥 Profiles (PII-free aggregates)…');
   let total = 0, subscribed = 0, unsubscribed = 0, suppressed = 0;
   const propCounts = new Map();
   let next = '/api/profiles/?page[size]=100&additional-fields[profile]=subscriptions';
@@ -340,25 +340,25 @@ async function exportProfilesSummary() {
       }
     }
     next = page.links?.next || null;
-    if (pages % 5 === 0) console.log(`    … ${pages} pages, ${total} profils`);
+    if (pages % 5 === 0) console.log(`    … ${pages} pages, ${total} profiles`);
   }
   const topProps = [...propCounts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5);
   const lines = [
-    '# Profils Klaviyo — Agrégats (sans PII)',
-    `**Exporté le** : ${new Date().toISOString()}`,
+    '# Klaviyo profiles — Aggregates (PII-free)',
+    `**Exported on**: ${new Date().toISOString()}`,
     '',
-    '> Aucune PII (email/nom/téléphone/adresse) n\'est exportée — uniquement des compteurs.',
+    '> No PII (email/name/phone/address) is exported — counters only.',
     '',
-    '## Vue d\'ensemble',
-    `- **Total** : ${total}`,
-    `- **SUBSCRIBED** : ${subscribed}`,
-    `- **UNSUBSCRIBED** : ${unsubscribed}`,
-    `- **Supprimés (suppression active)** : ${suppressed}`,
+    '## Overview',
+    `- **Total**: ${total}`,
+    `- **SUBSCRIBED**: ${subscribed}`,
+    `- **UNSUBSCRIBED**: ${unsubscribed}`,
+    `- **Suppressed (active suppression)**: ${suppressed}`,
     '',
-    '## Top 5 clés de propriétés custom',
-    '| Clé | Nb profils |',
+    '## Top 5 custom property keys',
+    '| Key | Profile count |',
     '|---|---|',
-    ...(topProps.length ? topProps.map(([k, c]) => `| ${k} | ${c} |`) : ['| _aucune_ | 0 |']),
+    ...(topProps.length ? topProps.map(([k, c]) => `| ${k} | ${c} |`) : ['| _none_ | 0 |']),
     '',
   ];
   writeFile('profiles-summary.md', lines.join('\n'));
@@ -366,7 +366,7 @@ async function exportProfilesSummary() {
 }
 
 // ------------------------------------------------------------
-// Résumé final
+// Final summary
 // ------------------------------------------------------------
 function writeSummary({ enriched, lists, segments, metrics, profilesAgg, tplStats }) {
   const live = enriched.filter(e => e.flow.attributes?.status === 'live').length;
@@ -376,26 +376,26 @@ function writeSummary({ enriched, lists, segments, metrics, profilesAgg, tplStat
     return `| ${a.name || '—'} | ${detectTrigger(a)} | ${emails} | ${a.status || '—'} |`;
   }).join('\n');
   const md = [
-    '# Résumé Klaviyo',
-    `**Exporté le** : ${new Date().toISOString()}`,
+    '# Klaviyo summary',
+    `**Exported on**: ${new Date().toISOString()}`,
     '',
-    '## Vue d\'ensemble',
-    `- Total flows : ${enriched.length} (${live} actifs)`,
-    `- Total listes : ${lists.length}`,
-    `- Total segments : ${segments.length}`,
-    `- Total métriques : ${metrics.length}`,
-    `- Total profils : ${profilesAgg.total} (dont ${profilesAgg.subscribed} abonnés, ${profilesAgg.unsubscribed} désabonnés)`,
-    `- Templates : ${tplStats.withTpl}/${tplStats.total} (${tplStats.withoutTpl} sans)`,
+    '## Overview',
+    `- Total flows: ${enriched.length} (${live} active)`,
+    `- Total lists: ${lists.length}`,
+    `- Total segments: ${segments.length}`,
+    `- Total metrics: ${metrics.length}`,
+    `- Total profiles: ${profilesAgg.total} (${profilesAgg.subscribed} subscribed, ${profilesAgg.unsubscribed} unsubscribed)`,
+    `- Templates: ${tplStats.withTpl}/${tplStats.total} (${tplStats.withoutTpl} without)`,
     '',
-    '## Flows détaillés',
-    '| Flow | Trigger | Nb emails | Statut |',
+    '## Flows detail',
+    '| Flow | Trigger | Email count | Status |',
     '|---|---|---|---|',
     flowRows,
     '',
-    '## Étapes suivantes',
-    '- Adapter les templates HTML : `node integrations/shopify-email/adapt-templates.js`',
-    '- Recréer chaque flow dans **Shopify Email** ou un autre ESP',
-    '- Désactiver Klaviyo flow par flow après validation',
+    '## Next steps',
+    '- Adapt HTML templates: `node integrations/shopify-email/adapt-templates.js`',
+    '- Recreate each flow in **Shopify Email** or another ESP',
+    '- Disable Klaviyo flow by flow once validated',
     '',
   ].join('\n');
   writeFile('klaviyo-summary.md', md);
@@ -405,13 +405,13 @@ function writeSummary({ enriched, lists, segments, metrics, profilesAgg, tplStat
 // MAIN
 // ------------------------------------------------------------
 async function main() {
-  console.log('🚀 Klaviyo Export — lecture seule (GET only)\n');
+  console.log('🚀 Klaviyo export — read-only (GET only)\n');
   if (!config.KLAVIYO_API_KEY) {
-    console.error('❌  KLAVIYO_API_KEY manquante dans .env');
+    console.error('❌  KLAVIYO_API_KEY missing in .env');
     process.exit(1);
   }
   ensureDirs();
-  console.log(`📁 Sortie : ${OUT_DIR}`);
+  console.log(`📁 Output: ${OUT_DIR}`);
 
   const enriched = await fetchFlowsWithActions();
   writeFlowsMd(enriched);
@@ -421,11 +421,11 @@ async function main() {
   const metrics = await exportMetrics();
   const profilesAgg = await exportProfilesSummary();
   writeSummary({ enriched, lists, segments, metrics, profilesAgg, tplStats });
-  console.log('\n✅ Export Klaviyo terminé.');
+  console.log('\n✅ Klaviyo export completed.');
 }
 
 main().catch(e => {
-  console.error('❌  Erreur fatale:', e.message);
+  console.error('❌  Fatal error:', e.message);
   if (e.stack) console.error(e.stack);
   process.exit(1);
 });

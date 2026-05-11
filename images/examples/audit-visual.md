@@ -1,33 +1,33 @@
-# Audit visuel des images via Gemini Vision
+# Visual image audit via Gemini Vision
 
-> Cette recette appelle **Gemini Vision** pour classifier chaque image
-> en `ADEQUATE` / `A_REMPLACER` / `NO_IMAGE`.
+> This recipe calls **Gemini Vision** to classify each image into
+> `ADEQUATE` / `REPLACE` / `NO_IMAGE`.
 >
-> Coût : 1 appel Gemini Vision par image. Le résultat est mis en cache
-> (`.audit-tmp/visual-audit.json`) pour éviter les ré-appels.
+> Cost: 1 Gemini Vision call per image. The result is cached
+> (`.audit-tmp/visual-audit.json`) so subsequent runs are free.
 
-## Étape 1 — Lancer l'audit
+## Step 1 — Run the audit
 
 ```
 node images/visual-audit.js --filter "status ACTIVE"
 ```
 
-Sortie :
+Output:
 
-- `visual-audit-report.md` à la racine du repo
-- `.audit-tmp/visual-audit.json` (cache, réutilisable)
+- `visual-audit-report.md` at the repo root
+- `.audit-tmp/visual-audit.json` (reusable cache)
 
-## Étape 2 — Décider
+## Step 2 — Decide
 
-Lister les `A_REMPLACER` du rapport et préparer une tâche de génération
-d'image (`images/image-generate.js`).
+List the `REPLACE` entries from the report and prepare an
+image-generation task (`images/image-generate.js`).
 
 ## Options
 
-- `--refresh` — ignore le cache et ré-appelle Gemini Vision
-- `--filter "handle mon-produit"` — restreindre à un produit
+- `--refresh` — ignore the cache and re-call Gemini Vision
+- `--filter "handle my-product"` — restrict to one product
 
-## Critères de succès
+## Success criteria
 
-- Tous les produits filtrés ont un verdict pour chaque image
-- Le rapport sépare clairement ADEQUATE / A_REMPLACER / NO_IMAGE
+- Every targeted product has a verdict for each image
+- The report clearly separates ADEQUATE / REPLACE / NO_IMAGE

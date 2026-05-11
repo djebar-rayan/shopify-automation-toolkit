@@ -1,20 +1,20 @@
 'use strict';
 
 // ============================================================
-// audit/full-audit.js — Audit complet d'une boutique Shopify
+// audit/full-audit.js — Full audit of a Shopify store
 // ------------------------------------------------------------
-// Ce script extrait l'état complet de la boutique (produits,
-// collections, pages, navigation, thème), détecte les flags
-// de qualité et calcule des scores par dimension :
+// Extracts the complete store state (products, collections,
+// pages, navigation, theme), detects quality flags and computes
+// per-dimension scores:
 //   - SEO       (meta tags, alt texts, handles)
-//   - UX        (images, structure HTML)
-//   - Contenu   (descriptions, tags)
-//   - Opérations (SKU, variantes)
+//   - UX        (images, HTML structure)
+//   - Content   (descriptions, tags)
+//   - Operations (SKU, variants)
 //
-// Sortie : audit-report.md à la racine du repo.
-// Lecture seule, aucune mutation.
+// Output: audit-report.md at the repo root.
+// Read-only, no mutation.
 //
-// Usage : node audit/full-audit.js
+// Usage: node audit/full-audit.js
 // ============================================================
 
 const fs = require('fs');
@@ -51,13 +51,13 @@ async function checkPermissions() {
     permissions[t.name] = !r._error;
     console.log(`  ${permissions[t.name] ? '✓' : '✗'} ${t.name}`);
   }
-  permissions.write_products = true; // hypothèse : si l'auth a inclus write_products
+  permissions.write_products = true; // assumed if auth included write_products
   permissions.write_content = permissions.read_content;
   return permissions;
 }
 
 // ============================================================
-// COLLECTE
+// COLLECT
 // ============================================================
 function collectShopInfo() {
   const r = execGql(`
@@ -86,15 +86,15 @@ async function collectAllProducts() {
   let cursor = null, page = 0;
   do {
     page++;
-    process.stdout.write(`\r  Récupération produits page ${page}... (${products.length} jusqu'ici)`);
+    process.stdout.write(`\r  Fetching products page ${page}... (${products.length} so far)`);
     const r = execGql(q, { first: 50, after: cursor });
-    if (r._error) { console.log('\n  [SKIP] Produits : ' + (r._msg || r._error)); break; }
+    if (r._error) { console.log('\n  [SKIP] Products: ' + (r._msg || r._error)); break; }
     products.push(...(r.products.edges || []).map(e => e.node));
     const pi = r.products.pageInfo;
     cursor = pi.hasNextPage ? pi.endCursor : null;
     if (cursor) await sleep(300);
   } while (cursor);
-  console.log(`\n  ${products.length} produits récupérés.`);
+  console.log(`\n  ${products.length} products fetched.`);
   return products;
 }
 
@@ -115,11 +115,11 @@ async function collectCollections() {
   let cursor = null;
   do {
     const r = execGql(q, { first: 50, after: cursor });
-    if (r._error) { console.log('  [SKIP] Collections : ' + (r._msg || r._error)); break; }
+    if (r._error) { console.log('  [SKIP] Collections: ' + (r._msg || r._error)); break; }
     all.push(...r.collections.edges.map(e => e.node));
     cursor = r.collections.pageInfo.hasNextPage ? r.collections.pageInfo.endCursor : null;
   } while (cursor);
-  console.log(`  ${all.length} collections récupérées.`);
+  console.log(`  ${all.length} collections fetched.`);
   return all;
 }
 
@@ -146,7 +146,7 @@ function collectTheme(permissions) {
 }
 
 // ============================================================
-// ANALYSE
+// ANALYZE
 // ============================================================
 function analyzeProduct(product) {
   const html = product.descriptionHtml || '';
@@ -163,26 +163,26 @@ function analyzeProduct(product) {
   const flags = [];
   const add = (code, priority, dimension, message) => flags.push({ code, priority, dimension, message });
 
-  if (wc === 0) add('desc_missing', 1, 'Contenu', 'Description absente');
-  else if (wc < THRESHOLDS.DESC_MIN_WORDS) add('desc_too_short', 1, 'Contenu', `Description trop courte (${wc} mots)`);
-  if (wc > 0 && !hasHtml) add('desc_no_html', 2, 'Contenu', 'Description sans structure HTML');
+  if (wc === 0) add('desc_missing', 1, 'Content', 'Description missing');
+  else if (wc < THRESHOLDS.DESC_MIN_WORDS) add('desc_too_short', 1, 'Content', `Description too short (${wc} words)`);
+  if (wc > 0 && !hasHtml) add('desc_no_html', 2, 'Content', 'Description without HTML structure');
 
-  if (images.length === 0) add('image_missing', 1, 'UX', 'Aucune image');
-  else if (images.length < THRESHOLDS.IMAGE_MIN) add('image_count_low', 2, 'UX', `Seulement ${images.length} image(s)`);
-  if (imagesNoAlt.length > 0) add('image_no_alttext', 1, 'SEO', `${imagesNoAlt.length} image(s) sans alt`);
+  if (images.length === 0) add('image_missing', 1, 'UX', 'No image');
+  else if (images.length < THRESHOLDS.IMAGE_MIN) add('image_count_low', 2, 'UX', `Only ${images.length} image(s)`);
+  if (imagesNoAlt.length > 0) add('image_no_alttext', 1, 'SEO', `${imagesNoAlt.length} image(s) without alt`);
 
-  if (!seoTitle) add('seo_title_missing', 1, 'SEO', 'Meta title SEO absent');
-  else if (seoTitle.value.length > THRESHOLDS.SEO_TITLE_MAX) add('seo_title_long', 2, 'SEO', `Meta title trop long (${seoTitle.value.length}c)`);
-  else if (seoTitle.value.length < THRESHOLDS.SEO_TITLE_MIN) add('seo_title_short', 2, 'SEO', `Meta title trop court (${seoTitle.value.length}c)`);
+  if (!seoTitle) add('seo_title_missing', 1, 'SEO', 'Missing SEO meta title');
+  else if (seoTitle.value.length > THRESHOLDS.SEO_TITLE_MAX) add('seo_title_long', 2, 'SEO', `Meta title too long (${seoTitle.value.length}c)`);
+  else if (seoTitle.value.length < THRESHOLDS.SEO_TITLE_MIN) add('seo_title_short', 2, 'SEO', `Meta title too short (${seoTitle.value.length}c)`);
 
-  if (!seoDesc) add('seo_desc_missing', 1, 'SEO', 'Meta description absente');
-  else if (seoDesc.value.length > THRESHOLDS.SEO_DESC_MAX) add('seo_desc_long', 2, 'SEO', `Meta desc trop longue (${seoDesc.value.length}c)`);
+  if (!seoDesc) add('seo_desc_missing', 1, 'SEO', 'Missing SEO meta description');
+  else if (seoDesc.value.length > THRESHOLDS.SEO_DESC_MAX) add('seo_desc_long', 2, 'SEO', `Meta desc too long (${seoDesc.value.length}c)`);
 
-  if (!product.tags || product.tags.length === 0) add('no_tags', 2, 'Contenu', 'Aucun tag');
-  if (/[^a-z0-9\-]/.test(product.handle)) add('handle_bad_chars', 2, 'SEO', `Handle non conforme : ${product.handle}`);
+  if (!product.tags || product.tags.length === 0) add('no_tags', 2, 'Content', 'No tag');
+  if (/[^a-z0-9\-]/.test(product.handle)) add('handle_bad_chars', 2, 'SEO', `Non-compliant handle: ${product.handle}`);
 
   const variantsNoSku = variants.filter(v => !v.sku || v.sku.trim() === '');
-  if (variantsNoSku.length > 0) add('variant_no_sku', 3, 'Opérations', `${variantsNoSku.length} variante(s) sans SKU`);
+  if (variantsNoSku.length > 0) add('variant_no_sku', 3, 'Operations', `${variantsNoSku.length} variant(s) without SKU`);
 
   let penalty = 0;
   for (const f of flags) penalty += f.priority === 1 ? 2 : f.priority === 2 ? 1 : 0.5;
@@ -193,12 +193,12 @@ function analyzeProduct(product) {
 
 function computeScores(analyzed) {
   const n = analyzed.length;
-  if (n === 0) return { SEO: 10, UX: 10, Contenu: 10, Opérations: 10, overall: 10 };
+  if (n === 0) return { SEO: 10, UX: 10, Content: 10, Operations: 10, overall: 10 };
   const dimFlags = {
     SEO: ['image_no_alttext', 'seo_title_missing', 'seo_desc_missing', 'seo_title_long', 'seo_title_short', 'seo_desc_long', 'handle_bad_chars'],
     UX: ['image_missing', 'image_count_low', 'desc_no_html'],
-    Contenu: ['desc_missing', 'desc_too_short', 'no_tags'],
-    Opérations: ['variant_no_sku'],
+    Content: ['desc_missing', 'desc_too_short', 'no_tags'],
+    Operations: ['variant_no_sku'],
   };
   const scores = {};
   for (const [dim, list] of Object.entries(dimFlags)) {
@@ -215,9 +215,9 @@ function computeScores(analyzed) {
 
 function statusEmoji(score) {
   const s = parseFloat(score);
-  if (s >= 7.5) return '🟢 Bon';
-  if (s >= 5) return '🟡 Moyen';
-  return '🔴 Faible';
+  if (s >= 7.5) return '🟢 Good';
+  if (s >= 5) return '🟡 Average';
+  return '🔴 Low';
 }
 
 function buildP1P2(analyzed) {
@@ -238,59 +238,59 @@ function buildP1P2(analyzed) {
 function generateReport(ctx) {
   const { shopInfo, analyzed, collections, pages, theme, scores, issues, permissions } = ctx;
   const today = new Date().toISOString().split('T')[0];
-  const plan = shopInfo.plan ? shopInfo.plan.displayName : 'Inconnu';
+  const plan = shopInfo.plan ? shopInfo.plan.displayName : 'Unknown';
   const lines = [];
   const h = (level, text) => lines.push('#'.repeat(level) + ' ' + text);
   const br = () => lines.push('');
   const rule = () => lines.push('---');
 
-  h(1, `Audit Shopify — ${shopInfo.name || config.BRAND_NAME}`);
-  lines.push(`**Date :** ${today}  `);
-  lines.push(`**Boutique :** ${config.STORE}  `);
-  lines.push(`**Plan :** ${plan}  |  **Devise :** ${shopInfo.currencyCode || '?'}  |  **Produits :** ${analyzed.length}  |  **Collections :** ${collections.length}`);
-  lines.push(`**Mode :** ${permissions.write_products ? 'Lecture + Écriture' : 'Lecture seule'}`);
+  h(1, `Shopify audit — ${shopInfo.name || config.BRAND_NAME}`);
+  lines.push(`**Date:** ${today}  `);
+  lines.push(`**Store:** ${config.STORE}  `);
+  lines.push(`**Plan:** ${plan}  |  **Currency:** ${shopInfo.currencyCode || '?'}  |  **Products:** ${analyzed.length}  |  **Collections:** ${collections.length}`);
+  lines.push(`**Mode:** ${permissions.write_products ? 'Read + Write' : 'Read-only'}`);
   rule();
 
-  h(2, 'Scores globaux');
+  h(2, 'Overall scores');
   br();
-  lines.push('| Dimension | Score /10 | Statut |');
+  lines.push('| Dimension | Score /10 | Status |');
   lines.push('|---|---|---|');
   for (const [dim, score] of Object.entries(scores)) {
     if (dim === 'overall') continue;
     lines.push(`| ${dim} | ${score}/10 | ${statusEmoji(score)} |`);
   }
-  lines.push(`| **Global** | **${scores.overall}/10** | ${statusEmoji(scores.overall)} |`);
+  lines.push(`| **Overall** | **${scores.overall}/10** | ${statusEmoji(scores.overall)} |`);
   br();
   rule();
 
-  h(2, 'Problèmes critiques (Priorité 1)');
+  h(2, 'Critical issues (Priority 1)');
   br();
-  if (issues.p1.length === 0) lines.push('✅ Aucun problème critique détecté.');
+  if (issues.p1.length === 0) lines.push('✅ No critical issue detected.');
   else {
-    lines.push('| # | Produit | Problème | Dimension |');
+    lines.push('| # | Product | Issue | Dimension |');
     lines.push('|---|---|---|---|');
     issues.p1.slice(0, 50).forEach((e, i) =>
       lines.push(`| ${i + 1} | ${e.product} (\`${e.handle}\`) | ${e.flag.message} | ${e.flag.dimension} |`));
-    if (issues.p1.length > 50) lines.push(`\n_… et ${issues.p1.length - 50} autres P1_`);
+    if (issues.p1.length > 50) lines.push(`\n_… and ${issues.p1.length - 50} more P1 issues_`);
   }
   br();
 
-  h(2, 'Améliorations importantes (Priorité 2)');
+  h(2, 'Important improvements (Priority 2)');
   br();
-  if (issues.p2.length === 0) lines.push('✅ Aucune amélioration urgente.');
+  if (issues.p2.length === 0) lines.push('✅ No urgent improvement.');
   else {
-    lines.push('| # | Produit | Problème | Dimension |');
+    lines.push('| # | Product | Issue | Dimension |');
     lines.push('|---|---|---|---|');
     issues.p2.slice(0, 50).forEach((e, i) =>
       lines.push(`| ${i + 1} | ${e.product} (\`${e.handle}\`) | ${e.flag.message} | ${e.flag.dimension} |`));
-    if (issues.p2.length > 50) lines.push(`\n_… et ${issues.p2.length - 50} autres P2_`);
+    if (issues.p2.length > 50) lines.push(`\n_… and ${issues.p2.length - 50} more P2 issues_`);
   }
   br();
   rule();
 
-  h(2, 'Analyse produit par produit');
+  h(2, 'Per-product analysis');
   br();
-  lines.push('| Produit | Mots desc. | Images | Alt manquants | SEO title | SEO desc | Tags | Score |');
+  lines.push('| Product | Desc words | Images | Missing alts | SEO title | SEO desc | Tags | Score |');
   lines.push('|---|---|---|---|---|---|---|---|');
   for (const p of analyzed) {
     const a = p._a;
@@ -301,7 +301,7 @@ function generateReport(ctx) {
 
   h(2, 'Collections');
   br();
-  lines.push('| Collection | Handle | Produits | Description | Image |');
+  lines.push('| Collection | Handle | Products | Description | Image |');
   lines.push('|---|---|---|---|---|');
   for (const c of collections) {
     const count = c.productsCount?.count ?? '?';
@@ -313,18 +313,18 @@ function generateReport(ctx) {
 
   if (pages.length > 0) {
     rule();
-    h(2, 'Pages du site');
+    h(2, 'Pages');
     br();
-    lines.push('| Page | Handle | Créée le |');
+    lines.push('| Page | Handle | Created |');
     lines.push('|---|---|---|');
     for (const pg of pages) lines.push(`| ${pg.title} | ${pg.handle} | ${(pg.createdAt || '').split('T')[0]} |`);
     br();
 
     const handles = pages.map(p => p.handle.toLowerCase());
-    const important = ['about', 'a-propos', 'contact', 'faq', 'cgv', 'conditions', 'retours', 'confidentialite', 'livraison'];
+    const important = ['about', 'contact', 'faq', 'terms', 'returns', 'privacy', 'shipping'];
     const missing = important.filter(h => !handles.some(hh => hh.includes(h)));
     if (missing.length > 0) {
-      h(3, 'Pages importantes manquantes');
+      h(3, 'Missing important pages');
       missing.forEach(m => lines.push(`- ⚠️ \`${m}\``));
       br();
     }
@@ -332,25 +332,25 @@ function generateReport(ctx) {
 
   if (theme) {
     rule();
-    h(2, 'Thème actif');
-    lines.push(`**${theme.name}** (rôle : ${theme.role})`);
-    lines.push(`Dernière mise à jour : ${(theme.updatedAt || '').split('T')[0]}`);
+    h(2, 'Active theme');
+    lines.push(`**${theme.name}** (role: ${theme.role})`);
+    lines.push(`Last updated: ${(theme.updatedAt || '').split('T')[0]}`);
     br();
   }
 
   rule();
-  h(2, 'Pistes d\'action');
+  h(2, 'Action items');
   br();
   const countFlag = code => analyzed.filter(p => p._a.flags.some(f => f.code === code)).length;
-  const todo = (n, label) => `- [${n === 0 ? 'x' : ' '}] ${label} : **${n} produit(s)**`;
-  lines.push(todo(countFlag('seo_title_missing'), 'Meta titles manquants → `seo/seo-update.js`'));
-  lines.push(todo(countFlag('seo_desc_missing'), 'Meta descriptions manquantes → `seo/seo-update.js`'));
+  const todo = (n, label) => `- [${n === 0 ? 'x' : ' '}] ${label}: **${n} product(s)**`;
+  lines.push(todo(countFlag('seo_title_missing'), 'Missing SEO titles → `seo/seo-update.js`'));
+  lines.push(todo(countFlag('seo_desc_missing'), 'Missing SEO descriptions → `seo/seo-update.js`'));
   const nAlt = analyzed.reduce((acc, p) => acc + p._a.imagesNoAlt.length, 0);
-  lines.push(`- [${nAlt === 0 ? 'x' : ' '}] Alt texts manquants : **${nAlt} image(s)** → \`images/image-alt.js\``);
-  lines.push(todo(countFlag('desc_missing') + countFlag('desc_too_short'), 'Descriptions trop courtes → `content/update-products.js`'));
-  lines.push(todo(countFlag('desc_no_html'), 'Descriptions sans HTML → `content/update-products.js`'));
-  lines.push(todo(countFlag('image_count_low') + countFlag('image_missing'), 'Images insuffisantes → `images/image-generate.js`'));
-  lines.push(todo(countFlag('handle_bad_chars'), 'Handles non conformes → `content/handle-normalize.js`'));
+  lines.push(`- [${nAlt === 0 ? 'x' : ' '}] Missing alt texts: **${nAlt} image(s)** → \`images/image-alt.js\``);
+  lines.push(todo(countFlag('desc_missing') + countFlag('desc_too_short'), 'Descriptions too short → `content/update-products.js`'));
+  lines.push(todo(countFlag('desc_no_html'), 'Descriptions without HTML → `content/update-products.js`'));
+  lines.push(todo(countFlag('image_count_low') + countFlag('image_missing'), 'Not enough images → `images/image-generate.js`'));
+  lines.push(todo(countFlag('handle_bad_chars'), 'Non-compliant handles → `content/handle-normalize.js`'));
   br();
 
   fs.writeFileSync(REPORT_PATH, lines.join('\n'), 'utf8');
@@ -360,30 +360,30 @@ function generateReport(ctx) {
 // MAIN
 // ============================================================
 async function main() {
-  console.log('━━━ Audit complet ━━━\n');
-  console.log('Phase 0 : Vérification permissions');
+  console.log('━━━ Full audit ━━━\n');
+  console.log('Phase 0: Permission check');
   const permissions = await checkPermissions();
 
-  console.log('\nPhase 1 : Collecte des données');
+  console.log('\nPhase 1: Data collection');
   const shopInfo = collectShopInfo();
   const products = await collectAllProducts();
   const collections = await collectCollections();
   const pages = collectPages(permissions);
   const theme = collectTheme(permissions);
 
-  console.log('\nPhase 2 : Analyse');
+  console.log('\nPhase 2: Analysis');
   const analyzed = products.map(analyzeProduct);
   const scores = computeScores(analyzed);
   const issues = buildP1P2(analyzed);
-  console.log(`  Score global : ${scores.overall}/10 ${statusEmoji(scores.overall)}`);
-  console.log(`  P1 : ${issues.p1.length} problèmes critiques`);
-  console.log(`  P2 : ${issues.p2.length} améliorations`);
+  console.log(`  Overall score: ${scores.overall}/10 ${statusEmoji(scores.overall)}`);
+  console.log(`  P1: ${issues.p1.length} critical issues`);
+  console.log(`  P2: ${issues.p2.length} improvements`);
 
-  console.log('\nPhase 3 : Génération du rapport');
+  console.log('\nPhase 3: Report generation');
   generateReport({ shopInfo, analyzed, collections, pages, theme, scores, issues, permissions });
   console.log(`  ✓ ${REPORT_PATH}`);
 
-  console.log('\n━━━ Fin de l\'audit ━━━\n');
+  console.log('\n━━━ End of audit ━━━\n');
 }
 
 main().catch(e => { console.error('FATAL:', e.message); process.exit(1); });

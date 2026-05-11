@@ -2,32 +2,32 @@
 
 // ============================================================
 // integrations/shopify-email/adapt-templates.js
-// Adaptation générique d'un dossier de templates HTML Klaviyo
-// pour qu'ils passent dans l'éditeur Shopify Email.
+// Generic adaptation of a folder of Klaviyo HTML templates so they
+// load in the Shopify Email editor.
 // ------------------------------------------------------------
-// Source par défaut : ../klaviyo/templates/
-// Sortie  par défaut : ./templates-adapted/
+// Default source : ../klaviyo/templates/
+// Default output : ./templates-adapted/
 //
-// Les transformations appliquées :
-//   1. retrait du header de commentaire de l'export Klaviyo
-//   2. retrait des <script>
-//   3. retrait des pixels / @import klaviyo.com
-//   4. neutralisation des hrefs de tracking
-//   5. retrait des balises <klaviyo:*>
-//   6. retrait des conditionnels Outlook MSO
-//   7. inlining des règles CSS simples (`.classe`, `#id`, `tag`)
-//   8. substitution des variables Klaviyo standard vers Liquid Shopify
-//   9. (optionnel) substitutions supplémentaires depuis --mapping=<file.json>
-//   10. annotation HTML pour les variables non mappables (`<!-- KL -->`)
-//   11. extraction du <body>, retrait des <head>/<meta>/<title>/<style> globaux
-//   12. enveloppe dans un <div max-width:600px>
-//   13. minification HTML
+// Applied transformations:
+//   1. strip the Klaviyo export comment header
+//   2. strip <script>
+//   3. strip pixels / @import klaviyo.com
+//   4. neutralize tracking hrefs
+//   5. strip <klaviyo:*> tags
+//   6. strip Outlook MSO conditional comments
+//   7. inline simple CSS rules (`.class`, `#id`, `tag`)
+//   8. substitute standard Klaviyo variables to Shopify Liquid
+//   9. (optional) extra substitutions from --mapping=<file.json>
+//   10. annotate non-mappable variables with `<!-- KL -->`
+//   11. extract the <body>, strip global <head>/<meta>/<title>/<style>
+//   12. wrap in a <div max-width:600px>
+//   13. HTML minification
 //
-// Aucune mutation Shopify. Aucun appel réseau. Pure transformation locale.
+// No Shopify mutation. No network call. Pure local transformation.
 //
-// Usage :
+// Usage:
 //   node integrations/shopify-email/adapt-templates.js
-//   node integrations/shopify-email/adapt-templates.js --src=./mes-templates --out=./out
+//   node integrations/shopify-email/adapt-templates.js --src=./my-templates --out=./out
 //   node integrations/shopify-email/adapt-templates.js --mapping=./mymap.json
 // ============================================================
 
@@ -45,8 +45,8 @@ const SHOP_NAME = config.BRAND_NAME;
 const SHOP_URL = `https://${config.STORE.replace(/\.myshopify\.com$/, '.myshopify.com')}/`;
 
 // ------------------------------------------------------------
-// Variables Klaviyo standard → Liquid Shopify Email
-// (Liste de paires [regex, remplacement])
+// Standard Klaviyo variables → Shopify Email Liquid
+// (list of [regex, replacement] pairs)
 // ------------------------------------------------------------
 const DEFAULT_VAR_MAP = [
   [/\{\{\s*person\.first_name\s*(\|[^}]*)?\s*\}\}/g, '{{ customer.first_name }}'],
@@ -61,7 +61,7 @@ const DEFAULT_VAR_MAP = [
   [/\{%\s*unsubscribe\s*%\}/g,                       '{{ unsubscribe_link }}'],
 ];
 
-// Variables qui n'ont PAS d'équivalent natif → annotées en commentaire HTML
+// Variables that have NO native equivalent → annotated with an HTML comment
 const NON_MAPPABLE_PATTERNS = [
   /\{\{\s*event\.[^}]+\}\}/g,
   /\{\{\s*item\.[^}]+\}\}/g,
@@ -78,10 +78,10 @@ const LOOP_PATTERNS = [
 ];
 
 // ============================================================
-// Étapes de transformation
+// Transformation steps
 // ============================================================
 function stripExportHeader(html) {
-  return html.replace(/^\s*<!--[\s\S]*?Exporté\s*:[\s\S]*?-->\s*/i, '');
+  return html.replace(/^\s*<!--[\s\S]*?Exported\s*:[\s\S]*?-->\s*/i, '');
 }
 
 function stripScripts(html) {
@@ -125,7 +125,7 @@ function rewriteCurrencyFormat(html) {
 function annotateLoops(html) {
   let out = html;
   for (const re of LOOP_PATTERNS) {
-    out = out.replace(re, m => `${m}<!-- KL: à adapter -->`);
+    out = out.replace(re, m => `${m}<!-- KL: needs adaptation -->`);
   }
   return out;
 }
@@ -145,7 +145,7 @@ function applyVarMap(html, varMap) {
 }
 
 // ------------------------------------------------------------
-// CSS inlining (sélecteurs simples : .class, #id, tag)
+// CSS inlining (simple selectors: .class, #id, tag)
 // ------------------------------------------------------------
 function parseSimpleSelector(sel) {
   const t = sel.trim();
@@ -262,7 +262,7 @@ function minify(html) {
 }
 
 // ============================================================
-// Pipeline complet pour un fichier
+// Full pipeline for one file
 // ============================================================
 function adaptOne(srcPath, dstPath, varMap) {
   const before = fs.readFileSync(srcPath, 'utf8');
@@ -293,7 +293,7 @@ function main() {
   const out = getFlag('out', DEFAULT_OUT);
   const mappingFile = getFlag('mapping');
   if (!fs.existsSync(src)) {
-    console.error(`❌  Dossier source introuvable : ${src}`);
+    console.error(`❌  Source folder not found: ${src}`);
     process.exit(1);
   }
   fs.mkdirSync(out, { recursive: true });
@@ -304,44 +304,43 @@ function main() {
     for (const { pattern, replacement, flags } of extra) {
       varMap.push([new RegExp(pattern, flags || 'g'), replacement]);
     }
-    console.log(`+${extra.length} substitutions custom depuis ${path.basename(mappingFile)}`);
+    console.log(`+${extra.length} custom substitutions from ${path.basename(mappingFile)}`);
   }
 
   console.log(`\n━━━ adapt-templates ━━━`);
-  console.log(`  Source : ${src}`);
-  console.log(`  Sortie : ${out}\n`);
+  console.log(`  Source: ${src}`);
+  console.log(`  Output: ${out}\n`);
 
   const files = fs.readdirSync(src).filter(f => /\.html?$/i.test(f));
-  if (!files.length) { console.log('  Aucun template HTML trouvé.'); return; }
+  if (!files.length) { console.log('  No HTML template found.'); return; }
 
   const results = [];
   for (const f of files) {
     const r = adaptOne(path.join(src, f), path.join(out, f), varMap);
     const ok = r.sizeAfter <= 50 * 1024;
-    console.log(`  ${ok ? '✅' : '⚠️'} ${f} — ${(r.sizeAfter / 1024).toFixed(1)} ko (${r.sizeBefore} → ${r.sizeAfter})`);
+    console.log(`  ${ok ? '✅' : '⚠️'} ${f} — ${(r.sizeAfter / 1024).toFixed(1)} KB (${r.sizeBefore} → ${r.sizeAfter})`);
     results.push({ file: f, ...r, ok });
   }
 
-  // Rapport synthétique
   const md = [
-    '# Rapport de migration des templates',
-    `**Date** : ${new Date().toISOString()}`,
-    `**Source** : ${src}`,
-    `**Sortie** : ${out}`,
-    `**Limite Shopify Email** : 50 ko par template`,
+    '# Template migration report',
+    `**Date**: ${new Date().toISOString()}`,
+    `**Source**: ${src}`,
+    `**Output**: ${out}`,
+    `**Shopify Email limit**: 50 KB per template`,
     '',
-    '| Fichier | Taille avant | Taille après | OK |',
+    '| File | Size before | Size after | OK |',
     '|---|---:|---:|:---:|',
-    ...results.map(r => `| ${r.file} | ${(r.sizeBefore / 1024).toFixed(1)} ko | ${(r.sizeAfter / 1024).toFixed(1)} ko | ${r.ok ? '✅' : '⚠️'} |`),
+    ...results.map(r => `| ${r.file} | ${(r.sizeBefore / 1024).toFixed(1)} KB | ${(r.sizeAfter / 1024).toFixed(1)} KB | ${r.ok ? '✅' : '⚠️'} |`),
     '',
-    '## Étapes suivantes',
-    '- Coller chaque template dans l\'éditeur HTML de Shopify Email',
-    '- Vérifier visuellement, envoyer un email de test',
-    '- Adapter manuellement les variables annotées `<!-- KL -->` (variables Klaviyo non mappables)',
+    '## Next steps',
+    '- Paste each template into the Shopify Email HTML editor',
+    '- Visually check it, send a test email',
+    '- Adapt the variables annotated `<!-- KL -->` manually (non-mappable Klaviyo variables)',
     '',
   ].join('\n');
   fs.writeFileSync(REPORT_PATH, md, 'utf8');
-  console.log(`\n  ✓ Rapport : ${REPORT_PATH}`);
+  console.log(`\n  ✓ Report: ${REPORT_PATH}`);
 }
 
 main();

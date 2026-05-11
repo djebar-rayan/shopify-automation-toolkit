@@ -1,30 +1,30 @@
-# Description des collections vides
+# Describe empty collections
 
-## Cible
+## Target
 
-- **Scope** : collections
-- **Filtre** : tous
-- **Nb entités concernées** : 0
+- **Scope**: collections
+- **Filter**: all
+- **Entities affected**: 0
 
-> ⚠️ Le filtre `tous` cible **toutes** les collections. Si vous voulez
-> ne traiter que celles sans description, c'est aux scripts amont
-> (audit/audit.js) de présélectionner par handle.
+> ⚠️ The `all` filter targets **every** collection. If you only want to
+> address those without a description, the upstream scripts
+> (audit/audit.js) should pre-select by handle first.
 
 ## Action
 
-- **Type** : update
-- **Champ modifié** : descriptionHtml
-- **Valeur** : générer via Gemini avec ce prompt : "Rédige une description de collection HTML, 80-120 mots, avec un paragraphe de présentation et une mention courte du positionnement. Pas de Markdown, pas de DOCTYPE."
+- **Type**: update
+- **Field**: descriptionHtml
+- **Value**: generate via Gemini with this prompt: "Write an HTML collection description, 80–120 words, with one introduction paragraph and a short positioning statement. No Markdown, no DOCTYPE."
 
-## Validation avant application
+## Validation
 
-- [x] Vérifier que les entités cibles sont bien dans `store-data/collections.md`
-- [x] Afficher les changements prévus avant d'appliquer
-- [x] Demander confirmation `o/N` avant la mutation
+- [x] Verify target entities are in `store-data/collections.md`
+- [x] Show planned changes (dry-run)
+- [x] Ask confirmation y/N before mutation
 
-## Critères de succès
+## Success criteria
 
-- Chaque collection ciblée a une description entre 80 et 120 mots
-- Aucun balisage Markdown résiduel dans le HTML
+- Each targeted collection has an 80–120 word description
+- No residual Markdown markup in the HTML
 
-## Résultats
+## Results

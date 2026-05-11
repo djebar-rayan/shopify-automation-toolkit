@@ -1,23 +1,22 @@
 'use strict';
 
 // ============================================================
-// seo/seo-update.js — Génère + applique meta titles / descriptions / alt
+// seo/seo-update.js — Generate + apply meta titles / descriptions / alt
 // ------------------------------------------------------------
-// Utilise les formules de lib/builders/seo-meta.js (sans Gemini)
-// pour produire des meta SEO cohérents puis pousse les
-// mutations Shopify productUpdate.
+// Uses the formulas of lib/builders/seo-meta.js (no Gemini) to
+// produce coherent SEO meta and push Shopify productUpdate mutations.
 //
-// Cibles : produits actifs qui n'ont pas encore de meta SEO,
-// ou cible explicite via filtre DSL.
+// Default target: active products missing SEO meta, or an explicit
+// target via filter DSL.
 //
-// Usage :
-//   node seo/seo-update.js --target=titles      [--filter "..."] [--confirm] [--yes]
+// Usage:
+//   node seo/seo-update.js --target=titles       [--filter "..."] [--confirm] [--yes]
 //   node seo/seo-update.js --target=descriptions
 //   node seo/seo-update.js --target=alt
 //
 // --target : titles | descriptions | alt
-// --filter : optionnel, mini-DSL (cf. tasks/_template.md)
-// --confirm: applique réellement (sinon dry-run)
+// --filter : optional, mini-DSL (see tasks/_template.md)
+// --confirm: actually applies (otherwise dry-run)
 // ============================================================
 
 const { getFlag, hasFlag, confirm, sleep } = require('../lib/cli');
@@ -32,31 +31,29 @@ const TARGETS = ['titles', 'descriptions', 'alt'];
 async function main() {
   const target = getFlag('target', 'titles');
   if (!TARGETS.includes(target)) {
-    console.error(`❌  --target invalide : ${target}. Valides : ${TARGETS.join(', ')}`);
+    console.error(`❌  Invalid --target: ${target}. Valid: ${TARGETS.join(', ')}`);
     process.exit(1);
   }
   const apply = hasFlag('confirm');
   const userFilter = getFlag('filter');
 
-  // Filtre par défaut selon la cible : ne traiter que ce qui manque
+  // Default filter per target: only handle missing fields
   const defaultFilter = {
-    titles: 'status ACTIVE, seo_title manquant',
-    descriptions: 'status ACTIVE, seo_description manquant',
+    titles: 'status ACTIVE, seo_title missing',
+    descriptions: 'status ACTIVE, seo_description missing',
     alt: 'status ACTIVE, no_alt',
   }[target];
   const filter = userFilter || defaultFilter;
 
   console.log(`\n━━━ seo-update (${target}) ━━━`);
-  console.log(`  Mode   : ${apply ? 'APPLIQUER' : 'dry-run'}`);
-  console.log(`  Filtre : ${filter}\n`);
+  console.log(`  Mode  : ${apply ? 'APPLY' : 'dry-run'}`);
+  console.log(`  Filter: ${filter}\n`);
 
   const blocks = parseStoreDataBlocks('products.md');
   const matched = applyFilter(blocks, filter);
-  console.log(`  ${matched.length}/${blocks.length} produit(s) ciblé(s).`);
+  console.log(`  ${matched.length}/${blocks.length} product(s) targeted.`);
   if (!matched.length) return;
 
-  // Pour chaque produit, on doit recharger title/productType/etc. depuis store-data
-  // Les blocks contiennent déjà ces infos via enrichBlock.
   if (target === 'alt') {
     return runAltText(matched, apply);
   }
@@ -76,19 +73,19 @@ async function main() {
     return { block: b, newValue };
   });
 
-  console.log(`\n  Préview (5 premières) :`);
+  console.log(`\n  Preview (first 5):`);
   for (const item of plan.slice(0, 5)) {
     console.log(`    ${item.block.handle.padEnd(40)} → ${item.newValue}`);
   }
-  if (plan.length > 5) console.log(`    … (+${plan.length - 5} produits)`);
+  if (plan.length > 5) console.log(`    … (+${plan.length - 5} products)`);
 
   if (!apply) {
-    console.log('\n  (dry-run terminé — relancer avec --confirm pour appliquer)\n');
+    console.log('\n  (dry-run completed — rerun with --confirm to apply)\n');
     return;
   }
 
-  const ok = await confirm(`\n  Appliquer sur ${plan.length} produit(s) ?`, true);
-  if (!ok) { console.log('  Annulé.'); return; }
+  const ok = await confirm(`\n  Apply to ${plan.length} product(s)?`, true);
+  if (!ok) { console.log('  Cancelled.'); return; }
 
   const MUTATION = `
     mutation Upd($input: ProductInput!) {
@@ -115,14 +112,13 @@ async function main() {
     }
     await sleep(config.DELAY_SHOPIFY);
   }
-  console.log(`\n  Résultat : ${okCount} ok, ${errors} erreur(s).\n`);
+  console.log(`\n  Result: ${okCount} ok, ${errors} error(s).\n`);
 }
 
 // ------------------------------------------------------------
-// Cible "alt" : alt texts manquants → generateAltText par image
+// "alt" target: missing alt texts → generateAltText per image
 // ------------------------------------------------------------
 async function runAltText(matched, apply) {
-  // Recharge les détails images (ID + alt) via Shopify pour cibler avec précision.
   const Q = `
     query GetMedia($id: ID!) {
       product(id: $id) {
@@ -149,19 +145,19 @@ async function runAltText(matched, apply) {
       }
     });
   }
-  console.log(`\n  ${plan.length} alt text(s) à générer.`);
-  console.log('  Préview (5 premiers) :');
+  console.log(`\n  ${plan.length} alt text(s) to generate.`);
+  console.log('  Preview (first 5):');
   for (const item of plan.slice(0, 5)) {
     console.log(`    ${item.handle} #${item.idx} → ${item.newAlt}`);
   }
 
   if (!apply) {
-    console.log('\n  (dry-run terminé — relancer avec --confirm pour appliquer)\n');
+    console.log('\n  (dry-run completed — rerun with --confirm to apply)\n');
     return;
   }
 
-  const ok = await confirm(`\n  Appliquer ${plan.length} alt text(s) ?`, true);
-  if (!ok) { console.log('  Annulé.'); return; }
+  const ok = await confirm(`\n  Apply ${plan.length} alt text(s)?`, true);
+  if (!ok) { console.log('  Cancelled.'); return; }
 
   const M = `
     mutation UpdMedia($productId: ID!, $media: [UpdateMediaInput!]!) {
@@ -188,7 +184,7 @@ async function runAltText(matched, apply) {
     }
     await sleep(config.DELAY_SHOPIFY);
   }
-  console.log(`\n  Résultat : ${okCount} ok, ${errors} erreur(s).\n`);
+  console.log(`\n  Result: ${okCount} ok, ${errors} error(s).\n`);
 }
 
 main().catch(e => { console.error('FATAL:', e.message); process.exit(1); });

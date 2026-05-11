@@ -1,33 +1,33 @@
-# Audit images — comptage et alt manquants
+# Image audit — count and missing alts
 
-> Recette pilotée par fichier de tâche. Pour un audit ad-hoc plus rapide :
+> Task-driven recipe. For a faster ad-hoc audit:
 >
 > ```
 > node images/image-audit.js --filter "status ACTIVE, images < 3"
 > ```
 
-## Cible
+## Target
 
-- **Scope** : products
-- **Filtre** : status ACTIVE, images < 3
-- **Nb entités concernées** : 0
+- **Scope**: products
+- **Filter**: status ACTIVE, images < 3
+- **Entities affected**: 0
 
 ## Action
 
-- **Type** : audit
-- **Champ modifié** : —
-- **Valeur** : —
+- **Type**: audit
+- **Field**: —
+- **Value**: —
 
-## Validation avant application
+## Validation
 
-- [x] Vérifier que les entités cibles sont bien dans `store-data/products.md`
-- [ ] Afficher les changements prévus avant d'appliquer
-- [ ] Demander confirmation `o/N` avant la mutation
+- [x] Verify target entities are in `store-data/products.md`
+- [ ] Show planned changes (dry-run)
+- [ ] Ask confirmation y/N before mutation
 
-## Critères de succès
+## Success criteria
 
-- Liste des produits avec moins de `SHOP_IMAGE_MIN` images
-- Total alt texts manquants connu
-- Aucune mutation Shopify
+- List of products with fewer than `SHOP_IMAGE_MIN` images
+- Total missing alt texts known
+- No Shopify mutation
 
-## Résultats
+## Results
